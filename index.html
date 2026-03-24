@@ -40,7 +40,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .stat-item{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:12px 8px;text-align:center;cursor:pointer;transition:transform .15s}
 .stat-item:active{transform:scale(.97)}
 .stat-icon{font-size:18px;margin-bottom:4px}
-.stat-val{font-size:15px;font-weight:700;color:#1a1a2e}
+.stat-val{font-size:13px;font-weight:700;color:#1a1a2e}
 .stat-label{font-size:10px;color:#999;margin-top:2px}
 
 .section-header{display:flex;justify-content:space-between;align-items:center;padding:8px 16px 6px}
@@ -86,9 +86,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .badge-title-card{margin:16px 16px 12px;border-radius:16px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);padding:18px;color:#fff}
 .badge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 12px}
 .badge-cat-title{padding:8px 16px 4px;font-size:12px;font-weight:700;color:#888}
-.badge-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:10px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;transition:all .2s;text-align:center}
-.badge-item.earned{border-color:#ffd700;background:#fffdf0}
-.badge-item.hidden{opacity:.5}
+.badge-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:10px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;transition:all .2s;text-align:center;filter:grayscale(100%);opacity:.55}
+.badge-item.earned{border-color:#ffd700;background:#fffdf0;filter:none;opacity:1}
+.badge-item.hidden{opacity:.4}
 .badge-item .b-icon{font-size:22px}
 .badge-item .b-name{font-size:9px;color:#555;line-height:1.3}
 .badge-item.earned .b-name{color:#b8860b;font-weight:600}
@@ -183,7 +183,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="section-header">
       <span class="section-title">최근 라이딩</span>
-      <span class="section-more" onclick="switchTab('record')">전체 보기 ▶️</span>
+      <span class="section-more" onclick="goToRecordList()">전체 보기 ▶️</span>
     </div>
     <div class="card" style="padding:4px 16px">
       <div id="recent-list"><div class="no-data">기록이 없습니다</div></div>
@@ -470,23 +470,37 @@ function closeDetail(e) {
 }
 
 // ===== 홈 렌더링 =====
+function fmtMinsHome(mins) {
+  const h = Math.floor(mins/60), m = mins%60;
+  return h + '시간 ' + String(m).padStart(2,'0') + '분';
+}
+
+function goToRecordList() {
+  switchTab('record');
+  setTimeout(() => {
+    const el = document.getElementById('records-list');
+    if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 80);
+}
+
 function renderHome() {
   const total = records.reduce((s, r) => s + (r.dist||0), 0);
   const totalMins = records.reduce((s, r) => s + (r.hour||0)*60 + (r.min||0), 0);
   document.getElementById('total-km-hero').textContent = total.toFixed(1);
-  document.getElementById('home-rides').textContent = records.length;
-  document.getElementById('home-time').textContent = totalMins >= 60 ? Math.floor(totalMins/60)+'h' : totalMins+'m';
-  document.getElementById('home-badges').textContent = earnedBadges.length;
+  document.getElementById('home-rides').textContent = records.length + '회';
+  document.getElementById('home-time').textContent = fmtMinsHome(totalMins);
+  document.getElementById('home-badges').textContent = earnedBadges.length + '개';
 
-  const ti = getTitleInfo(earnedBadges.length);
+  const nonTitleCount = earnedBadges.filter(id => id < 82 || id > 91).length;
+  const totalBadgeCount = earnedBadges.length;
+  const ti = getTitleInfo(nonTitleCount);
   document.getElementById('hero-title-icon').textContent = ti.icon;
   document.getElementById('hero-title-name').textContent = ti.name;
   const nextThresh = ti.nextAt;
-  const cur = earnedBadges.length;
   const prevAt = ti.from;
-  const pct = nextThresh ? Math.min(100, Math.round((cur - prevAt) / (nextThresh - prevAt) * 100)) : 100;
+  const pct = nextThresh ? Math.min(100, Math.round((nonTitleCount - prevAt) / (nextThresh - prevAt) * 100)) : 100;
   document.getElementById('hero-title-sub').textContent =
-    `뱃지 ${cur}/100개 획득 · ${nextThresh ? '다음 칭호까지 '+(nextThresh-cur)+'개' : '최고 칭호 달성!'}`;
+    `뱃지 ${totalBadgeCount}/100개 획득 · ${nextThresh ? '다음 칭호까지 '+(nextThresh-nonTitleCount)+'개' : '최고 칭호 달성!'}`;
   document.getElementById('hero-progress').style.width = pct + '%';
 
   const recent = records.slice(0, 3);
@@ -614,16 +628,16 @@ const BADGES = [
   {id:80, icon:'🏋️', name:'체육의 날', desc:'10월 셋째 토요일 라이딩', cat:'특별한 날', hidden:false},
   {id:81, icon:'🌟', name:'100번째 기록', desc:'100번째 라이딩', cat:'특별한 날', hidden:false},
   // 칭호 뱃지 (82-91)
-  {id:82, icon:'🌱', name:'새싹 라이더', desc:'새싹 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:83, icon:'🚲', name:'동네 라이더', desc:'동네 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:84, icon:'🚴', name:'진짜 라이더', desc:'진짜 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:85, icon:'⚡️', name:'천 킬로 사나이', desc:'천 킬로 사나이 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:86, icon:'🔥', name:'철각의 사나이', desc:'철각의 사나이 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:87, icon:'💎', name:'다이아 라이더', desc:'다이아 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:88, icon:'🏆', name:'라이딩 챔피언', desc:'라이딩 챔피언 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:89, icon:'👑', name:'페달의 왕', desc:'페달의 왕 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:90, icon:'🌟', name:'라이딩 마스터', desc:'라이딩 마스터 칭호 달성', cat:'칭호 뱃지', hidden:false},
-  {id:91, icon:'🚀', name:'전설의 페달러', desc:'전설의 페달러 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:82, icon:'🌱', name:'새싹 라이더', desc:'일반 뱃지 1개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:83, icon:'🚲', name:'동네 라이더', desc:'일반 뱃지 5개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:84, icon:'🚴', name:'진짜 라이더', desc:'일반 뱃지 10개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:85, icon:'⚡️', name:'천 킬로 사나이', desc:'일반 뱃지 20개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:86, icon:'🔥', name:'철각의 사나이', desc:'일반 뱃지 30개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:87, icon:'💎', name:'다이아 라이더', desc:'일반 뱃지 40개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:88, icon:'🏆', name:'라이딩 챔피언', desc:'일반 뱃지 50개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:89, icon:'👑', name:'페달의 왕', desc:'일반 뱃지 60개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:90, icon:'🌟', name:'라이딩 마스터', desc:'일반 뱃지 75개 이상 획득', cat:'칭호 뱃지', hidden:false},
+  {id:91, icon:'🚀', name:'전설의 페달러', desc:'일반 뱃지 90개 이상 획득', cat:'칭호 뱃지', hidden:false},
   // 히든 뱃지 (92-100)
   {id:92, icon:'🎩', name:'신사 라이더', desc:'메모 50회 이상 작성', cat:'히든 뱃지', hidden:true},
   {id:93, icon:'📸', name:'사진작가', desc:'사진 첨부 30회 이상', cat:'히든 뱃지', hidden:true},
@@ -827,11 +841,9 @@ function computeEarnedBadges() {
     }
   });
 
-  // 칭호 뱃지 (칭호 달성 후 획득)
-  // 칭호 뱃지는 earned(비칭호) 수 기준이 아닌 비칭호 뱃지 수로 계산해야 하나,
-  // 순환 방지를 위해 현재 획득 뱃지 수 기준으로 계산
-  const nonTitleBadges = earned.filter(id => id < 82).length;
-  if (nonTitleBadges >= 0) earned.push(82); // 새싹은 기본
+  // 칭호 뱃지 (칭호 달성 후 획득) — 칭호 뱃지(82~91) 제외한 일반 뱃지 수 기준
+  const nonTitleBadges = earned.filter(id => id < 82 || id > 91).length;
+  if (nonTitleBadges >= 1) earned.push(82);
   if (nonTitleBadges >= 5) earned.push(83);
   if (nonTitleBadges >= 10) earned.push(84);
   if (nonTitleBadges >= 20) earned.push(85);
@@ -948,13 +960,14 @@ function closeBadgePopup() {
 
 // ===== 뱃지 탭 렌더링 =====
 function renderBadges() {
-  const cur = earnedBadges.length;
-  const ti = getTitleInfo(cur);
+  const totalBadgeCount = earnedBadges.length;
+  const nonTitleCount = earnedBadges.filter(id => id < 82 || id > 91).length;
+  const ti = getTitleInfo(nonTitleCount);
   document.getElementById('bt-icon').textContent = ti.icon;
   document.getElementById('bt-name').textContent = ti.name;
   document.getElementById('bt-sub').textContent =
-    `뱃지 ${cur}/100개 획득 · ${ti.nextAt ? '다음 칭호까지 '+(ti.nextAt-cur)+'개' : '최고 칭호 달성!'}`;
-  const pct = ti.nextAt ? Math.min(100, Math.round((cur - ti.from) / (ti.nextAt - ti.from) * 100)) : 100;
+    `뱃지 ${totalBadgeCount}/100개 획득 · ${ti.nextAt ? '다음 칭호까지 '+(ti.nextAt-nonTitleCount)+'개' : '최고 칭호 달성!'}`;
+  const pct = ti.nextAt ? Math.min(100, Math.round((nonTitleCount - ti.from) / (ti.nextAt - ti.from) * 100)) : 100;
   document.getElementById('bt-progress').style.width = pct + '%';
 
   const cats = [...new Set(BADGES.map(b => b.cat))];
