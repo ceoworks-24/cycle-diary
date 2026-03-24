@@ -81,6 +81,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .record-card-memo{font-size:11px;color:#666;margin-top:6px;white-space:pre-wrap}
 .record-card-img{width:100%;border-radius:8px;margin-top:8px;max-height:150px;object-fit:cover}
 .delete-btn{position:absolute;top:10px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#ccc;padding:4px}
+.edit-btn{position:absolute;top:10px;right:36px;background:none;border:none;font-size:14px;cursor:pointer;color:#bbb;padding:4px}
 
 /* 뱃지 탭 */
 .badge-title-card{margin:16px 16px 12px;border-radius:16px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);padding:18px;color:#fff}
@@ -193,7 +194,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <!-- 기록 탭 -->
   <div id="tab-record" class="tab-content">
     <div class="record-form">
-      <div style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:16px">라이딩 기록 추가</div>
+      <div id="form-title" style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:16px">라이딩 기록 추가</div>
       <div class="form-group">
         <label class="form-label">날짜</label>
         <input type="date" id="f-date" class="form-input">
@@ -236,7 +237,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <label class="form-label">사진 첨부 <span style="color:#bbb">(선택)</span></label>
         <input type="file" id="f-photo" class="form-input" accept="image/*" style="padding:8px">
       </div>
-      <button class="save-btn" onclick="saveRecord()">저장하기</button>
+      <button class="save-btn" id="save-btn" onclick="saveRecord()">저장하기</button>
+      <button id="cancel-edit-btn" onclick="cancelEdit()" style="display:none;width:100%;padding:12px;border:1px solid #e0e0e0;border-radius:10px;background:#fff;font-size:14px;cursor:pointer;color:#888;margin-top:8px">수정 취소</button>
     </div>
     <div style="border-top:6px solid #f0f0f0;margin:0 0 8px"></div>
     <div class="search-bar">
@@ -266,12 +268,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div style="padding:16px 16px 0;font-size:16px;font-weight:700;color:#1a1a2e">통계</div>
     <div class="stats-tabs">
       <button class="stats-tab active" onclick="switchStatTab('total',this)">전체 누적</button>
-      <button class="stats-tab" onclick="switchStatTab('year',this)">연간 누적</button>
-      <button class="stats-tab" onclick="switchStatTab('month',this)">월별 누적</button>
+      <button class="stats-tab" onclick="switchStatTab('period',this)">기간별 통계</button>
     </div>
     <div id="stat-total" class="stats-section active"></div>
-    <div id="stat-year" class="stats-section"></div>
-    <div id="stat-month" class="stats-section"></div>
+    <div id="stat-period" class="stats-section">
+      <div style="display:flex;gap:8px;padding:12px 16px 0">
+        <select id="period-year" class="form-input" style="flex:1;padding:8px 10px;font-size:13px" onchange="onPeriodChange()"></select>
+        <select id="period-month" class="form-input" style="flex:1;padding:8px 10px;font-size:13px" onchange="onPeriodChange()">
+          <option value="">전체 (연간)</option>
+          <option value="01">1월</option><option value="02">2월</option><option value="03">3월</option>
+          <option value="04">4월</option><option value="05">5월</option><option value="06">6월</option>
+          <option value="07">7월</option><option value="08">8월</option><option value="09">9월</option>
+          <option value="10">10월</option><option value="11">11월</option><option value="12">12월</option>
+        </select>
+      </div>
+      <div id="period-content"></div>
+    </div>
   </div>
 
   <!-- 탭바 -->
@@ -330,6 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 let records = JSON.parse(localStorage.getItem('cd_records') || '[]');
 let earnedBadges = JSON.parse(localStorage.getItem('cd_badges') || '[]');
 let settings = JSON.parse(localStorage.getItem('cd_settings') || '{}');
+let editingId = null;
 if (!settings.firstUse) { settings.firstUse = new Date().toISOString().slice(0,10); saveSettings2(); }
 
 function saveRecords() { localStorage.setItem('cd_records', JSON.stringify(records)); }
@@ -374,11 +387,32 @@ async function saveRecord() {
     photo = await fileToBase64(photoFile);
   }
 
-  const rec = { id: Date.now(), date, time, dist, hour, min, course, weather, memo, photo };
-  records.unshift(rec);
-  saveRecords();
+  if (editingId !== null) {
+    const idx = records.findIndex(r => r.id === editingId);
+    if (idx !== -1) {
+      const existing = records[idx];
+      records[idx] = { ...existing, date, time, dist, hour, min, course, weather, memo, photo: photo || existing.photo };
+    }
+    editingId = null;
+    document.getElementById('form-title').textContent = '라이딩 기록 추가';
+    document.getElementById('save-btn').textContent = '저장하기';
+    document.getElementById('cancel-edit-btn').style.display = 'none';
+  } else {
+    const rec = { id: Date.now(), date, time, dist, hour, min, course, weather, memo, photo };
+    records.unshift(rec);
+  }
 
-  // 폼 초기화
+  saveRecords();
+  resetForm();
+  checkAllBadges();
+  renderRecordList();
+}
+
+function resetForm() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('f-date').value = today;
+  const now = new Date();
+  document.getElementById('f-time').value = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   document.getElementById('f-dist').value = '';
   document.getElementById('f-hour').value = '';
   document.getElementById('f-min').value = '';
@@ -386,9 +420,39 @@ async function saveRecord() {
   document.getElementById('f-memo').value = '';
   document.getElementById('f-photo').value = '';
   document.querySelectorAll('.weather-btn.active').forEach(b => b.classList.remove('active'));
+}
 
-  checkAllBadges();
-  renderRecordList();
+// ===== 기록 수정 =====
+function editRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('f-date').value = r.date;
+  document.getElementById('f-time').value = r.time || '';
+  document.getElementById('f-dist').value = r.dist;
+  document.getElementById('f-hour').value = r.hour || '';
+  document.getElementById('f-min').value = r.min || '';
+  document.getElementById('f-course').value = r.course || '';
+  document.getElementById('f-memo').value = r.memo || '';
+  document.getElementById('f-photo').value = '';
+  document.querySelectorAll('.weather-btn').forEach(b => b.classList.remove('active'));
+  (r.weather || []).forEach(w => {
+    const btn = document.querySelector(`.weather-btn[data-w="${w}"]`);
+    if (btn) btn.classList.add('active');
+  });
+  document.getElementById('form-title').textContent = '라이딩 기록 수정';
+  document.getElementById('save-btn').textContent = '수정 저장하기';
+  document.getElementById('cancel-edit-btn').style.display = '';
+  switchTab('record');
+  document.getElementById('tab-record').scrollTop = 0;
+}
+
+function cancelEdit() {
+  editingId = null;
+  resetForm();
+  document.getElementById('form-title').textContent = '라이딩 기록 추가';
+  document.getElementById('save-btn').textContent = '저장하기';
+  document.getElementById('cancel-edit-btn').style.display = 'none';
 }
 
 function fileToBase64(file) {
@@ -419,6 +483,7 @@ function renderRecordList() {
   el.innerHTML = filtered.map(r => `
     <div class="record-card" onclick="openDetail(${r.id})">
       <button class="delete-btn" onclick="event.stopPropagation();deleteRecord(${r.id})">✕</button>
+      <button class="edit-btn" onclick="event.stopPropagation();editRecord(${r.id})">✏️</button>
       <div class="record-card-header">
         <div>
           <div class="record-card-date">${r.date}${r.time?' '+r.time:''}</div>
@@ -1020,8 +1085,7 @@ function switchStatTab(name, btn) {
 
 function renderStats() {
   renderStatTotal();
-  renderStatYear();
-  renderStatMonth();
+  renderStatPeriod();
 }
 
 function renderStatTotal() {
@@ -1066,11 +1130,41 @@ function renderStatTotal() {
   `;
 }
 
-function renderStatYear() {
-  const year = new Date().getFullYear().toString();
+function renderStatPeriod() {
+  const yearSelect = document.getElementById('period-year');
+  const currentYear = new Date().getFullYear().toString();
+  const years = [...new Set(records.map(r => r.date.slice(0,4)))].sort().reverse();
+  if (!years.includes(currentYear)) years.unshift(currentYear);
+
+  const prevYear = yearSelect.value;
+  yearSelect.innerHTML = years.map(y => `<option value="${y}">${y}년</option>`).join('');
+  yearSelect.value = (prevYear && years.includes(prevYear)) ? prevYear : currentYear;
+
+  renderPeriodContent();
+}
+
+function onPeriodChange() {
+  renderPeriodContent();
+}
+
+function renderPeriodContent() {
+  const year = document.getElementById('period-year').value;
+  const month = document.getElementById('period-month').value;
+  const content = document.getElementById('period-content');
+  if (!year) { content.innerHTML = ''; return; }
+  if (!month) {
+    renderAnnualView(year, content);
+  } else {
+    renderMonthlyView(year, month, content);
+  }
+}
+
+function renderAnnualView(year, content) {
   const yearRecs = records.filter(r => r.date.startsWith(year));
   const total = yearRecs.reduce((s,r) => s+(r.dist||0), 0);
   const count = yearRecs.length;
+  const avg = count ? (total/count).toFixed(1) : 0;
+  const maxRide = count ? yearRecs.reduce((m,r) => r.dist>m.dist?r:m, yearRecs[0]) : null;
 
   const monthlyDist = {};
   for (let m=1;m<=12;m++) monthlyDist[String(m).padStart(2,'0')] = 0;
@@ -1079,63 +1173,50 @@ function renderStatYear() {
     monthlyDist[m] = (monthlyDist[m]||0) + (r.dist||0);
   });
   const months = Object.keys(monthlyDist).sort();
-  const maxRide = yearRecs.length ? yearRecs.reduce((m,r) => r.dist>m.dist?r:m, yearRecs[0]) : null;
-  const avg = count ? (total/count).toFixed(1) : 0;
 
-  document.getElementById('stat-year').innerHTML = `
-    <div class="stats-2grid">
-      ${statCard('올해 거리', total.toFixed(1)+'km', '')}
-      ${statCard('올해 횟수', count+'회', '')}
-    </div>
-    <div class="bar-chart">
-      <div class="bar-chart-title">올해 월별 거리</div>
-      ${barChart(months.map(m=>m+'월'), months.map(m => monthlyDist[m]))}
+  content.innerHTML = `
+    <div class="bar-chart" style="margin-top:12px">
+      <div class="bar-chart-title">${year}년 월별 거리</div>
+      ${barChart(months.map(m=>parseInt(m)+'월'), months.map(m => monthlyDist[m]))}
     </div>
     <div class="stats-2grid">
-      ${statCard('올해 최장', maxRide ? maxRide.dist+'km' : '-', maxRide ? maxRide.course||maxRide.date : '')}
-      ${statCard('올해 평균', avg+'km', '')}
+      ${statCard(year+'년 총 거리', total.toFixed(1)+'km', '')}
+      ${statCard(year+'년 횟수', count+'회', '')}
+      ${statCard('최장 라이딩', maxRide ? maxRide.dist+'km' : '-', maxRide ? maxRide.course||maxRide.date : '')}
+      ${statCard('평균 거리', avg+'km', '')}
     </div>
   `;
 }
 
-function renderStatMonth() {
-  const now = new Date();
-  const ym = now.toISOString().slice(0,7);
-  const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const prevYm = prevDate.toISOString().slice(0,7);
-
+function renderMonthlyView(year, month, content) {
+  const ym = year + '-' + month;
   const mRecs = records.filter(r => r.date.startsWith(ym));
-  const pRecs = records.filter(r => r.date.startsWith(prevYm));
-  const mTotal = mRecs.reduce((s,r) => s+(r.dist||0), 0);
-  const pTotal = pRecs.reduce((s,r) => s+(r.dist||0), 0);
-  const mCount = mRecs.length;
-  const pCount = pRecs.length;
-  const diffDist = mTotal - pTotal;
-  const diffCount = mCount - pCount;
+  const total = mRecs.reduce((s,r) => s+(r.dist||0), 0);
+  const count = mRecs.length;
+  const avg = count ? (total/count).toFixed(1) : 0;
+  const maxRide = count ? mRecs.reduce((m,r) => r.dist>m.dist?r:m, mRecs[0]) : null;
 
-  // 최근 6개월
-  const months6 = [];
-  for (let i=5;i>=0;i--) {
-    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
-    months6.push(d.toISOString().slice(0,7));
-  }
-  const m6dist = months6.map(m => records.filter(r=>r.date.startsWith(m)).reduce((s,r)=>s+(r.dist||0),0));
+  // 주별 거리 (1주~5주)
+  const weeklyDist = [0,0,0,0,0];
+  mRecs.forEach(r => {
+    const day = parseInt(r.date.slice(8,10));
+    const weekIdx = Math.min(Math.floor((day-1)/7), 4);
+    weeklyDist[weekIdx] += (r.dist||0);
+  });
+  let lastNonEmpty = 4;
+  while (lastNonEmpty > 0 && weeklyDist[lastNonEmpty] === 0) lastNonEmpty--;
+  const trimmedWeeks = weeklyDist.slice(0, lastNonEmpty+1);
 
-  const maxRide = mRecs.length ? mRecs.reduce((m,r) => r.dist>m.dist?r:m, mRecs[0]) : null;
-  const avg = mCount ? (mTotal/mCount).toFixed(1) : 0;
-
-  document.getElementById('stat-month').innerHTML = `
-    <div class="stats-2grid">
-      ${statCard('이번 달 거리', mTotal.toFixed(1)+'km', (diffDist>=0?'+':'')+diffDist.toFixed(1)+'km vs 지난달')}
-      ${statCard('이번 달 횟수', mCount+'회', (diffCount>=0?'+':'')+diffCount+'회 vs 지난달')}
-    </div>
-    <div class="bar-chart">
-      <div class="bar-chart-title">최근 6개월 거리</div>
-      ${barChart(months6.map(m=>m.slice(5)+'월'), m6dist)}
+  content.innerHTML = `
+    <div class="bar-chart" style="margin-top:12px">
+      <div class="bar-chart-title">${parseInt(month)}월 주별 거리</div>
+      ${barChart(trimmedWeeks.map((_,i)=>(i+1)+'주'), trimmedWeeks)}
     </div>
     <div class="stats-2grid">
-      ${statCard('이달 최장', maxRide ? maxRide.dist+'km' : '-', '')}
-      ${statCard('이달 평균', avg+'km', '')}
+      ${statCard(parseInt(month)+'월 거리', total.toFixed(1)+'km', '')}
+      ${statCard(parseInt(month)+'월 횟수', count+'회', '')}
+      ${statCard('최장 라이딩', maxRide ? maxRide.dist+'km' : '-', '')}
+      ${statCard('평균 거리', avg+'km', '')}
     </div>
   `;
 }
@@ -1184,15 +1265,7 @@ function saveSettings() {
 
 // ===== 초기화 =====
 function init() {
-  // 날짜 기본값 오늘
-  const today = new Date().toISOString().slice(0,10);
-  document.getElementById('f-date').value = today;
-  // 현재 시간 기본값
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2,'0');
-  const mm = String(now.getMinutes()).padStart(2,'0');
-  document.getElementById('f-time').value = hh+':'+mm;
-
+  resetForm();
   checkAllBadges();
   renderHome();
 }
