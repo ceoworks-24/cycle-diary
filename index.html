@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>사이클 다이어리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;display:flex;justify-content:center;min-height:100vh}
+#app{width:100%;max-width:390px;min-height:100vh;background:#f5f5f5;position:relative;display:flex;flex-direction:column}
+.tab-content{display:none;flex:1;overflow-y:auto;padding-bottom:80px}
+.tab-content.active{display:block}
+
+/* 탭바 */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:390px;background:#fff;border-top:1px solid #e0e0e0;display:flex;z-index:100;height:60px}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;background:none;cursor:pointer;font-size:10px;color:#999;transition:color .2s}
+.tab-btn.active{color:#1a1a2e}
+.tab-btn .icon{font-size:20px}
+
+/* 카드 */
+.card{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:16px;margin:0 16px 12px}
+
+/* 홈 탭 */
+.home-header{padding:20px 16px 8px;font-size:18px;font-weight:700;color:#1a1a2e}
+.home-header span{display:block;font-size:13px;font-weight:400;color:#888;margin-top:2px}
+
+.hero-card{margin:0 16px 12px;border-radius:16px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);padding:20px;color:#fff;cursor:pointer}
+.hero-label{font-size:12px;opacity:.7;margin-bottom:4px}
+.hero-km{font-size:48px;font-weight:800;line-height:1}
+.hero-km span{font-size:18px;font-weight:400;margin-left:4px}
+.title-card{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border-radius:10px;padding:10px 12px;margin-top:14px}
+.title-icon{font-size:22px}
+.title-info{flex:1}
+.title-name{font-size:14px;font-weight:700}
+.title-sub{font-size:11px;opacity:.75;margin-top:1px}
+.progress-bar{height:4px;background:rgba(255,255,255,.25);border-radius:2px;margin-top:6px;overflow:hidden}
+.progress-fill{height:100%;background:#ffd700;border-radius:2px;transition:width .4s}
+
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 16px 12px}
+.stat-item{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:12px 8px;text-align:center;cursor:pointer;transition:transform .15s}
+.stat-item:active{transform:scale(.97)}
+.stat-icon{font-size:18px;margin-bottom:4px}
+.stat-val{font-size:15px;font-weight:700;color:#1a1a2e}
+.stat-label{font-size:10px;color:#999;margin-top:2px}
+
+.section-header{display:flex;justify-content:space-between;align-items:center;padding:8px 16px 6px}
+.section-title{font-size:14px;font-weight:700;color:#1a1a2e}
+.section-more{font-size:12px;color:#888;cursor:pointer}
+
+.ride-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid #f0f0f0;cursor:pointer}
+.ride-item:last-child{border-bottom:none}
+.ride-date{font-size:11px;color:#888;min-width:52px}
+.ride-info{flex:1}
+.ride-course{font-size:13px;font-weight:600;color:#1a1a2e}
+.ride-km{font-size:12px;color:#555;margin-top:2px}
+.weather-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.wtag{font-size:10px;background:#f0f0f0;border-radius:4px;padding:1px 5px}
+
+/* 기록 탭 */
+.record-form{padding:16px}
+.form-group{margin-bottom:14px}
+.form-label{font-size:12px;font-weight:600;color:#555;margin-bottom:5px;display:block}
+.form-input{width:100%;padding:10px 12px;border:0.5px solid #e0e0e0;border-radius:8px;font-size:14px;background:#fff;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:#1a1a2e}
+.time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.weather-grid{display:flex;flex-wrap:wrap;gap:6px}
+.weather-btn{padding:6px 10px;border-radius:20px;border:1px solid #e0e0e0;background:#fff;font-size:12px;cursor:pointer;transition:all .2s}
+.weather-btn.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+.save-btn{width:100%;padding:14px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .2s}
+.save-btn:active{opacity:.85}
+
+.search-bar{padding:12px 16px 0}
+.search-input{width:100%;padding:10px 12px;border:0.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fff;outline:none}
+.records-list{padding:0 16px}
+.record-card{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:14px;margin-bottom:10px;cursor:pointer;position:relative}
+.record-card-header{display:flex;justify-content:space-between;align-items:flex-start}
+.record-card-date{font-size:11px;color:#888}
+.record-card-km{font-size:16px;font-weight:800;color:#1a1a2e}
+.record-card-course{font-size:13px;font-weight:600;margin-top:3px}
+.record-card-time{font-size:11px;color:#888;margin-top:2px}
+.record-card-memo{font-size:11px;color:#666;margin-top:6px;white-space:pre-wrap}
+.record-card-img{width:100%;border-radius:8px;margin-top:8px;max-height:150px;object-fit:cover}
+.delete-btn{position:absolute;top:10px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#ccc;padding:4px}
+
+/* 뱃지 탭 */
+.badge-title-card{margin:16px 16px 12px;border-radius:16px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);padding:18px;color:#fff}
+.badge-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 16px 12px}
+.badge-cat-title{padding:8px 16px 4px;font-size:12px;font-weight:700;color:#888}
+.badge-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border-radius:10px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;transition:all .2s;text-align:center}
+.badge-item.earned{border-color:#ffd700;background:#fffdf0}
+.badge-item.hidden{opacity:.5}
+.badge-item .b-icon{font-size:22px}
+.badge-item .b-name{font-size:9px;color:#555;line-height:1.3}
+.badge-item.earned .b-name{color:#b8860b;font-weight:600}
+.badge-tooltip{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;z-index:200;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s}
+.badge-tooltip.show{opacity:1}
+
+/* 통계 탭 */
+.stats-tabs{display:flex;padding:12px 16px 0;gap:8px}
+.stats-tab{padding:6px 14px;border-radius:20px;border:1px solid #e0e0e0;font-size:12px;background:#fff;cursor:pointer;color:#888}
+.stats-tab.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e}
+.stats-section{display:none;padding:12px 0}
+.stats-section.active{display:block}
+.stats-2grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 16px 12px}
+.stat-card{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:14px}
+.stat-card-val{font-size:20px;font-weight:800;color:#1a1a2e}
+.stat-card-label{font-size:11px;color:#888;margin-top:3px}
+.stat-card-sub{font-size:11px;color:#4caf50;margin-top:2px}
+
+/* 막대 그래프 */
+.bar-chart{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:16px;margin:0 16px 12px}
+.bar-chart-title{font-size:12px;font-weight:700;color:#1a1a2e;margin-bottom:12px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:100px}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:3px}
+.bar{width:100%;background:#1a1a2e;border-radius:3px 3px 0 0;min-height:2px;transition:height .4s}
+.bar-label{font-size:8px;color:#888;white-space:nowrap}
+.bar-val{font-size:8px;color:#1a1a2e;font-weight:600}
+
+/* 팝업 */
+.popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.popup-overlay.show{opacity:1;pointer-events:all}
+.popup-box{background:#fff;border-radius:16px;padding:24px;margin:16px;width:100%;max-width:340px;text-align:center;transform:scale(.9);transition:transform .3s}
+.popup-overlay.show .popup-box{transform:scale(1)}
+.popup-icon{font-size:48px;margin-bottom:8px}
+.popup-title{font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+.popup-sub{font-size:13px;color:#888}
+.popup-btn{margin-top:16px;padding:10px 24px;background:#1a1a2e;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600}
+
+/* 상세 팝업 */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
+.detail-overlay.show{opacity:1;pointer-events:all}
+.detail-box{background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:390px;max-height:80vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s}
+.detail-overlay.show .detail-box{transform:translateY(0)}
+
+/* 설정 버튼 */
+.settings-btn{position:absolute;top:20px;right:16px;background:none;border:none;font-size:18px;cursor:pointer;color:#888}
+
+/* 설정 팝업 */
+.settings-form{text-align:left}
+.settings-form .form-group{margin-bottom:12px}
+
+/* 공통 */
+.no-data{text-align:center;padding:40px 16px;color:#bbb;font-size:14px}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 홈 탭 -->
+  <div id="tab-home" class="tab-content active">
+    <div class="home-header">
+      안녕하세요, 라이더님!
+      <span>오늘도 즐거운 라이딩 되세요 🚴</span>
+    </div>
+    <button class="settings-btn" onclick="openSettings()">⚙️</button>
+    <div id="hero-card" class="hero-card" onclick="switchTab('badge')">
+      <div class="hero-label">누적 총 거리</div>
+      <div class="hero-km"><span id="total-km-hero">0</span><span>km</span></div>
+      <div class="title-card">
+        <div class="title-icon" id="hero-title-icon">🌱</div>
+        <div class="title-info">
+          <div class="title-name" id="hero-title-name">새싹 라이더</div>
+          <div class="title-sub" id="hero-title-sub">뱃지 0/100개 획득 · 다음 칭호까지 5개</div>
+          <div class="progress-bar"><div class="progress-fill" id="hero-progress" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-item" onclick="switchTab('stats')">
+        <div class="stat-icon">🚴</div>
+        <div class="stat-val" id="home-rides">0</div>
+        <div class="stat-label">총 라이딩</div>
+      </div>
+      <div class="stat-item" onclick="switchTab('stats')">
+        <div class="stat-icon">⏱️</div>
+        <div class="stat-val" id="home-time">0h</div>
+        <div class="stat-label">총 시간</div>
+      </div>
+      <div class="stat-item" onclick="switchTab('badge')">
+        <div class="stat-icon">🏅</div>
+        <div class="stat-val" id="home-badges">0</div>
+        <div class="stat-label">획득 뱃지</div>
+      </div>
+    </div>
+    <div class="section-header">
+      <span class="section-title">최근 라이딩</span>
+      <span class="section-more" onclick="switchTab('record')">전체 보기 ▶️</span>
+    </div>
+    <div class="card" style="padding:4px 16px">
+      <div id="recent-list"><div class="no-data">기록이 없습니다</div></div>
+    </div>
+  </div>
+
+  <!-- 기록 탭 -->
+  <div id="tab-record" class="tab-content">
+    <div class="record-form">
+      <div style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:16px">라이딩 기록 추가</div>
+      <div class="form-group">
+        <label class="form-label">날짜</label>
+        <input type="date" id="f-date" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">출발 시간</label>
+        <input type="time" id="f-time" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">거리 (km)</label>
+        <input type="number" id="f-dist" class="form-input" placeholder="예: 25.5" step="0.1" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">소요 시간</label>
+        <div class="time-row">
+          <input type="number" id="f-hour" class="form-input" placeholder="시간" min="0">
+          <input type="number" id="f-min" class="form-input" placeholder="분" min="0" max="59">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">코스명</label>
+        <input type="text" id="f-course" class="form-input" placeholder="예: 한강 라이딩">
+      </div>
+      <div class="form-group">
+        <label class="form-label">날씨 (중복 선택 가능)</label>
+        <div class="weather-grid">
+          <button class="weather-btn" data-w="맑음" onclick="toggleWeather(this)">☀️ 맑음</button>
+          <button class="weather-btn" data-w="흐림" onclick="toggleWeather(this)">⛅️ 흐림</button>
+          <button class="weather-btn" data-w="구름" onclick="toggleWeather(this)">☁️ 구름</button>
+          <button class="weather-btn" data-w="비" onclick="toggleWeather(this)">🌧 비</button>
+          <button class="weather-btn" data-w="눈" onclick="toggleWeather(this)">❄️ 눈</button>
+          <button class="weather-btn" data-w="바람" onclick="toggleWeather(this)">💨 바람</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">오늘 라이딩 어떠셨어요? <span style="color:#bbb">(선택)</span></label>
+        <textarea id="f-memo" class="form-input" rows="3" placeholder="메모를 입력하세요..." style="resize:none"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">사진 첨부 <span style="color:#bbb">(선택)</span></label>
+        <input type="file" id="f-photo" class="form-input" accept="image/*" style="padding:8px">
+      </div>
+      <button class="save-btn" onclick="saveRecord()">저장하기</button>
+    </div>
+    <div style="border-top:6px solid #f0f0f0;margin:0 0 8px"></div>
+    <div class="search-bar">
+      <input type="text" class="search-input" id="search-input" placeholder="🔍  코스명 또는 날짜로 검색" oninput="renderRecordList()">
+    </div>
+    <div class="records-list" id="records-list" style="margin-top:10px"></div>
+  </div>
+
+  <!-- 뱃지 탭 -->
+  <div id="tab-badge" class="tab-content">
+    <div class="badge-title-card">
+      <div class="hero-label">현재 칭호</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <span id="bt-icon" style="font-size:28px">🌱</span>
+        <div style="flex:1">
+          <div id="bt-name" style="font-size:16px;font-weight:700">새싹 라이더</div>
+          <div id="bt-sub" style="font-size:11px;opacity:.75;margin-top:2px">뱃지 0/100개 획득</div>
+          <div class="progress-bar" style="margin-top:6px"><div class="progress-fill" id="bt-progress" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="badge-container"></div>
+  </div>
+
+  <!-- 통계 탭 -->
+  <div id="tab-stats" class="tab-content">
+    <div style="padding:16px 16px 0;font-size:16px;font-weight:700;color:#1a1a2e">통계</div>
+    <div class="stats-tabs">
+      <button class="stats-tab active" onclick="switchStatTab('total',this)">전체 누적</button>
+      <button class="stats-tab" onclick="switchStatTab('year',this)">연간 누적</button>
+      <button class="stats-tab" onclick="switchStatTab('month',this)">월별 누적</button>
+    </div>
+    <div id="stat-total" class="stats-section active"></div>
+    <div id="stat-year" class="stats-section"></div>
+    <div id="stat-month" class="stats-section"></div>
+  </div>
+
+  <!-- 탭바 -->
+  <nav class="tabbar">
+    <button class="tab-btn active" onclick="switchTab('home')" id="tabbtn-home">
+      <span class="icon">🏠</span><span>홈</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('record')" id="tabbtn-record">
+      <span class="icon">📝</span><span>기록</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('badge')" id="tabbtn-badge">
+      <span class="icon">🏅</span><span>뱃지</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('stats')" id="tabbtn-stats">
+      <span class="icon">📊</span><span>통계</span>
+    </button>
+  </nav>
+</div>
+
+<!-- 뱃지 획득 팝업 -->
+<div class="popup-overlay" id="badge-popup">
+  <div class="popup-box">
+    <div class="popup-icon" id="popup-icon">🏅</div>
+    <div class="popup-title">새 뱃지 획득!</div>
+    <div class="popup-sub" id="popup-name"></div>
+    <div style="font-size:12px;color:#bbb;margin-top:4px" id="popup-desc"></div>
+    <button class="popup-btn" onclick="closeBadgePopup()">확인</button>
+  </div>
+</div>
+
+<!-- 기록 상세 팝업 -->
+<div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
+  <div class="detail-box" id="detail-box"></div>
+</div>
+
+<!-- 설정 팝업 -->
+<div class="popup-overlay" id="settings-popup">
+  <div class="popup-box" style="text-align:left">
+    <div style="font-size:16px;font-weight:700;margin-bottom:14px">⚙️ 설정</div>
+    <div class="form-group">
+      <label class="form-label">생일 (뱃지용)</label>
+      <input type="date" id="s-birthday" class="form-input">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="save-btn" style="flex:1" onclick="saveSettings()">저장</button>
+      <button onclick="closeSettings()" style="flex:1;padding:14px;border:1px solid #e0e0e0;border-radius:10px;background:#fff;font-size:15px;cursor:pointer">취소</button>
+    </div>
+  </div>
+</div>
+
+<!-- 뱃지 툴팁 -->
+<div class="badge-tooltip" id="badge-tooltip"></div>
+
+<script>
+// ===== 데이터 관리 =====
+let records = JSON.parse(localStorage.getItem('cd_records') || '[]');
+let earnedBadges = JSON.parse(localStorage.getItem('cd_badges') || '[]');
+let settings = JSON.parse(localStorage.getItem('cd_settings') || '{}');
+if (!settings.firstUse) { settings.firstUse = new Date().toISOString().slice(0,10); saveSettings2(); }
+
+function saveRecords() { localStorage.setItem('cd_records', JSON.stringify(records)); }
+function saveBadges() { localStorage.setItem('cd_badges', JSON.stringify(earnedBadges)); }
+function saveSettings2() { localStorage.setItem('cd_settings', JSON.stringify(settings)); }
+
+// ===== 탭 전환 =====
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tabbtn-' + name).classList.add('active');
+  if (name === 'home') renderHome();
+  if (name === 'record') renderRecordList();
+  if (name === 'badge') renderBadges();
+  if (name === 'stats') renderStats();
+}
+
+// ===== 날씨 토글 =====
+function toggleWeather(btn) { btn.classList.toggle('active'); }
+function getSelectedWeather() {
+  return [...document.querySelectorAll('.weather-btn.active')].map(b => b.dataset.w);
+}
+
+// ===== 기록 저장 =====
+async function saveRecord() {
+  const date = document.getElementById('f-date').value;
+  const time = document.getElementById('f-time').value;
+  const dist = parseFloat(document.getElementById('f-dist').value);
+  const hour = parseInt(document.getElementById('f-hour').value) || 0;
+  const min = parseInt(document.getElementById('f-min').value) || 0;
+  const course = document.getElementById('f-course').value.trim();
+  const weather = getSelectedWeather();
+  const memo = document.getElementById('f-memo').value.trim();
+  const photoFile = document.getElementById('f-photo').files[0];
+
+  if (!date) { alert('날짜를 입력하세요'); return; }
+  if (!dist || dist <= 0) { alert('거리를 입력하세요'); return; }
+
+  let photo = '';
+  if (photoFile) {
+    photo = await fileToBase64(photoFile);
+  }
+
+  const rec = { id: Date.now(), date, time, dist, hour, min, course, weather, memo, photo };
+  records.unshift(rec);
+  saveRecords();
+
+  // 폼 초기화
+  document.getElementById('f-dist').value = '';
+  document.getElementById('f-hour').value = '';
+  document.getElementById('f-min').value = '';
+  document.getElementById('f-course').value = '';
+  document.getElementById('f-memo').value = '';
+  document.getElementById('f-photo').value = '';
+  document.querySelectorAll('.weather-btn.active').forEach(b => b.classList.remove('active'));
+
+  checkAllBadges();
+  renderRecordList();
+}
+
+function fileToBase64(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+// ===== 기록 삭제 =====
+function deleteRecord(id) {
+  if (!confirm('이 기록을 삭제하시겠습니까?')) return;
+  records = records.filter(r => r.id !== id);
+  saveRecords();
+  checkAllBadges();
+  renderRecordList();
+}
+
+// ===== 기록 목록 렌더링 =====
+function renderRecordList() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const filtered = q ? records.filter(r =>
+    (r.course||'').toLowerCase().includes(q) || r.date.includes(q)
+  ) : records;
+  const el = document.getElementById('records-list');
+  if (!filtered.length) { el.innerHTML = '<div class="no-data">기록이 없습니다</div>'; return; }
+  el.innerHTML = filtered.map(r => `
+    <div class="record-card" onclick="openDetail(${r.id})">
+      <button class="delete-btn" onclick="event.stopPropagation();deleteRecord(${r.id})">✕</button>
+      <div class="record-card-header">
+        <div>
+          <div class="record-card-date">${r.date}${r.time?' '+r.time:''}</div>
+          <div class="record-card-course">${r.course||'기록 없음'}</div>
+          <div class="record-card-time">${fmtTime(r.hour,r.min)}</div>
+        </div>
+        <div class="record-card-km">${r.dist}km</div>
+      </div>
+      <div class="weather-tags">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
+      ${r.memo?`<div class="record-card-memo">${escHtml(r.memo.slice(0,80))}${r.memo.length>80?'...':''}</div>`:''}
+      ${r.photo?`<img class="record-card-img" src="${r.photo}">`:''}
+    </div>
+  `).join('');
+}
+
+function fmtTime(h, m) {
+  if (!h && !m) return '';
+  return (h?h+'시간 ':'') + (m?m+'분':'');
+}
+function wIcon(w) {
+  const m = {맑음:'☀️',흐림:'⛅️',구름:'☁️',비:'🌧',눈:'❄️',바람:'💨'};
+  return m[w]||'';
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ===== 기록 상세 =====
+function openDetail(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  const box = document.getElementById('detail-box');
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700">${r.course||'기록'}</div>
+      <button onclick="closeDetail()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">✕</button>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:8px">${r.date} ${r.time||''}</div>
+    <div style="font-size:28px;font-weight:800;color:#1a1a2e;margin-bottom:4px">${r.dist} km</div>
+    <div style="font-size:13px;color:#555;margin-bottom:10px">${fmtTime(r.hour,r.min)}</div>
+    <div class="weather-tags" style="margin-bottom:10px">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
+    ${r.memo?`<div style="font-size:13px;color:#444;white-space:pre-wrap;margin-bottom:10px">${escHtml(r.memo)}</div>`:''}
+    ${r.photo?`<img style="width:100%;border-radius:10px" src="${r.photo}">`:''}
+  `;
+  document.getElementById('detail-overlay').classList.add('show');
+}
+function closeDetail(e) {
+  if (!e || e.target === document.getElementById('detail-overlay')) {
+    document.getElementById('detail-overlay').classList.remove('show');
+  }
+}
+
+// ===== 홈 렌더링 =====
+function renderHome() {
+  const total = records.reduce((s, r) => s + (r.dist||0), 0);
+  const totalMins = records.reduce((s, r) => s + (r.hour||0)*60 + (r.min||0), 0);
+  document.getElementById('total-km-hero').textContent = total.toFixed(1);
+  document.getElementById('home-rides').textContent = records.length;
+  document.getElementById('home-time').textContent = totalMins >= 60 ? Math.floor(totalMins/60)+'h' : totalMins+'m';
+  document.getElementById('home-badges').textContent = earnedBadges.length;
+
+  const ti = getTitleInfo(earnedBadges.length);
+  document.getElementById('hero-title-icon').textContent = ti.icon;
+  document.getElementById('hero-title-name').textContent = ti.name;
+  const nextThresh = ti.nextAt;
+  const cur = earnedBadges.length;
+  const prevAt = ti.from;
+  const pct = nextThresh ? Math.min(100, Math.round((cur - prevAt) / (nextThresh - prevAt) * 100)) : 100;
+  document.getElementById('hero-title-sub').textContent =
+    `뱃지 ${cur}/100개 획득 · ${nextThresh ? '다음 칭호까지 '+(nextThresh-cur)+'개' : '최고 칭호 달성!'}`;
+  document.getElementById('hero-progress').style.width = pct + '%';
+
+  const recent = records.slice(0, 3);
+  const rl = document.getElementById('recent-list');
+  if (!recent.length) { rl.innerHTML = '<div class="no-data">기록이 없습니다</div>'; return; }
+  rl.innerHTML = recent.map(r => `
+    <div class="ride-item" onclick="switchTab('record')">
+      <div class="ride-date">${r.date.slice(5)}</div>
+      <div class="ride-info">
+        <div class="ride-course">${r.course||'기록 없음'}</div>
+        <div class="ride-km">${r.dist}km · ${fmtTime(r.hour,r.min)||'-'}</div>
+        <div class="weather-tags">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ===== 칭호 시스템 =====
+const TITLES = [
+  {from:0, to:4, icon:'🌱', name:'새싹 라이더', nextAt:5},
+  {from:5, to:9, icon:'🚲', name:'동네 라이더', nextAt:10},
+  {from:10, to:19, icon:'🚴', name:'진짜 라이더', nextAt:20},
+  {from:20, to:29, icon:'⚡️', name:'천 킬로 사나이', nextAt:30},
+  {from:30, to:39, icon:'🔥', name:'철각의 사나이', nextAt:40},
+  {from:40, to:49, icon:'💎', name:'다이아 라이더', nextAt:50},
+  {from:50, to:59, icon:'🏆', name:'라이딩 챔피언', nextAt:60},
+  {from:60, to:74, icon:'👑', name:'페달의 왕', nextAt:75},
+  {from:75, to:89, icon:'🌟', name:'라이딩 마스터', nextAt:90},
+  {from:90, to:100, icon:'🚀', name:'전설의 페달러', nextAt:null},
+];
+function getTitleInfo(count) {
+  for (let i = TITLES.length-1; i >= 0; i--) {
+    if (count >= TITLES[i].from) return TITLES[i];
+  }
+  return TITLES[0];
+}
+
+// ===== 뱃지 정의 =====
+const BADGES = [
+  // 거리 달성 (1-18)
+  {id:1, icon:'🌱', name:'첫 페달', desc:'첫 라이딩 기록', cat:'거리 달성', hidden:false},
+  {id:2, icon:'🚲', name:'10km', desc:'누적 10km 달성', cat:'거리 달성', hidden:false},
+  {id:3, icon:'🛤', name:'30km', desc:'누적 30km 달성', cat:'거리 달성', hidden:false},
+  {id:4, icon:'🛣', name:'50km', desc:'누적 50km 달성', cat:'거리 달성', hidden:false},
+  {id:5, icon:'💯', name:'100km', desc:'누적 100km 달성', cat:'거리 달성', hidden:false},
+  {id:6, icon:'🌟', name:'300km', desc:'누적 300km 달성', cat:'거리 달성', hidden:false},
+  {id:7, icon:'⚡️', name:'500km', desc:'누적 500km 달성', cat:'거리 달성', hidden:false},
+  {id:8, icon:'🚴', name:'1,000km', desc:'누적 1,000km 달성', cat:'거리 달성', hidden:false},
+  {id:9, icon:'🔥', name:'2,000km', desc:'누적 2,000km 달성', cat:'거리 달성', hidden:false},
+  {id:10, icon:'💎', name:'3,000km', desc:'누적 3,000km 달성', cat:'거리 달성', hidden:false},
+  {id:11, icon:'🗺', name:'대한민국 한 바퀴', desc:'누적 4,000km 달성', cat:'거리 달성', hidden:false},
+  {id:12, icon:'🏆', name:'5,000km', desc:'누적 5,000km 달성', cat:'거리 달성', hidden:false},
+  {id:13, icon:'🌏', name:'7,500km', desc:'누적 7,500km 달성', cat:'거리 달성', hidden:false},
+  {id:14, icon:'👑', name:'10,000km', desc:'누적 10,000km 달성', cat:'거리 달성', hidden:false},
+  {id:15, icon:'🌍', name:'20,000km', desc:'누적 20,000km 달성', cat:'거리 달성', hidden:false},
+  {id:16, icon:'🌐', name:'30,000km', desc:'누적 30,000km 달성', cat:'거리 달성', hidden:false},
+  {id:17, icon:'🌍', name:'지구 한 바퀴', desc:'누적 40,000km 달성', cat:'거리 달성', hidden:false},
+  {id:18, icon:'🚀', name:'50,000km', desc:'누적 50,000km 달성', cat:'거리 달성', hidden:false},
+  // 횟수 달성 (19-28)
+  {id:19, icon:'👋', name:'5회', desc:'라이딩 5회 달성', cat:'횟수 달성', hidden:false},
+  {id:20, icon:'🔟', name:'10회', desc:'라이딩 10회 달성', cat:'횟수 달성', hidden:false},
+  {id:21, icon:'📅', name:'30회', desc:'라이딩 30회 달성', cat:'횟수 달성', hidden:false},
+  {id:22, icon:'🏅', name:'50회', desc:'라이딩 50회 달성', cat:'횟수 달성', hidden:false},
+  {id:23, icon:'🎖', name:'70회', desc:'라이딩 70회 달성', cat:'횟수 달성', hidden:false},
+  {id:24, icon:'💪', name:'100회', desc:'라이딩 100회 달성', cat:'횟수 달성', hidden:false},
+  {id:25, icon:'🌠', name:'150회', desc:'라이딩 150회 달성', cat:'횟수 달성', hidden:false},
+  {id:26, icon:'🌟', name:'200회', desc:'라이딩 200회 달성', cat:'횟수 달성', hidden:false},
+  {id:27, icon:'💫', name:'250회', desc:'라이딩 250회 달성', cat:'횟수 달성', hidden:false},
+  {id:28, icon:'🏵', name:'300회', desc:'라이딩 300회 달성', cat:'횟수 달성', hidden:false},
+  // 계절/날씨 (29-43)
+  {id:29, icon:'☀️', name:'맑은 날 라이더', desc:'맑음 날씨 10회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:30, icon:'🌧', name:'빗속 질주', desc:'비 날씨 1회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:31, icon:'⛈', name:'폭우 돌파', desc:'비 날씨 5회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:32, icon:'❄️', name:'눈속 질주', desc:'눈 날씨 1회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:33, icon:'☃️', name:'설원의 라이더', desc:'눈 날씨 5회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:34, icon:'💨', name:'바람과 함께', desc:'바람 날씨 10회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:35, icon:'🌡', name:'한여름 돌파', desc:'7~8월 라이딩 10회', cat:'계절/날씨', hidden:false},
+  {id:36, icon:'🧊', name:'한겨울 전사', desc:'12~1월 라이딩 10회', cat:'계절/날씨', hidden:false},
+  {id:37, icon:'🌸', name:'봄바람 라이더', desc:'3~5월 라이딩 12회', cat:'계절/날씨', hidden:false},
+  {id:38, icon:'🍂', name:'가을 라이더', desc:'9~11월 라이딩 12회', cat:'계절/날씨', hidden:false},
+  {id:39, icon:'🌈', name:'사계절 완성', desc:'봄여름가을겨울 각 1회 이상', cat:'계절/날씨', hidden:false},
+  {id:40, icon:'🌤', name:'흐린 날도 OK', desc:'흐림 날씨 10회 라이딩', cat:'계절/날씨', hidden:false},
+  {id:41, icon:'🌪', name:'악천후 무법자', desc:'비/눈/바람 합산 20회', cat:'계절/날씨', hidden:false},
+  {id:42, icon:'🏜', name:'폭염 돌파', desc:'8월 라이딩 5회 이상', cat:'계절/날씨', hidden:false},
+  {id:43, icon:'🌨', name:'눈비 동시', desc:'눈+비 같은 날 라이딩', cat:'계절/날씨', hidden:false},
+  // 속도/강도 (44-56)
+  {id:44, icon:'🐢', name:'첫 장거리', desc:'1회 30km 이상', cat:'속도/강도', hidden:false},
+  {id:45, icon:'🚀', name:'하루 50km', desc:'1회 50km 이상', cat:'속도/강도', hidden:false},
+  {id:46, icon:'💥', name:'하루 100km', desc:'1회 100km 이상', cat:'속도/강도', hidden:false},
+  {id:47, icon:'🏔', name:'하루 150km', desc:'1회 150km 이상', cat:'속도/강도', hidden:false},
+  {id:48, icon:'👾', name:'하루 200km', desc:'1회 200km 이상', cat:'속도/강도', hidden:false},
+  {id:49, icon:'⏱️', name:'3시간 라이딩', desc:'1회 3시간 이상', cat:'속도/강도', hidden:false},
+  {id:50, icon:'🕐', name:'5시간 라이딩', desc:'1회 5시간 이상', cat:'속도/강도', hidden:false},
+  {id:51, icon:'🕰', name:'8시간 라이딩', desc:'1회 8시간 이상', cat:'속도/강도', hidden:false},
+  {id:52, icon:'🌞', name:'하루 종일', desc:'1회 10시간 이상', cat:'속도/강도', hidden:false},
+  {id:53, icon:'💪', name:'꾸준한 강도', desc:'한 달 500km 이상 1회', cat:'속도/강도', hidden:false},
+  {id:54, icon:'🦁', name:'월 500km 고수', desc:'월 500km 3회 달성', cat:'속도/강도', hidden:false},
+  {id:55, icon:'🔱', name:'3개월 연속 100km', desc:'3개월 연속 월 100km 이상', cat:'속도/강도', hidden:false},
+  {id:56, icon:'🌋', name:'연간 3,000km', desc:'1년 3,000km 이상', cat:'속도/강도', hidden:false},
+  // 코스 다양성 (57-68)
+  {id:57, icon:'🗺', name:'첫 코스 개척', desc:'코스 1개 등록', cat:'코스 다양성', hidden:false},
+  {id:58, icon:'🧭', name:'탐험가', desc:'코스 3개 등록', cat:'코스 다양성', hidden:false},
+  {id:59, icon:'🌍', name:'코스 수집가', desc:'코스 5개 등록', cat:'코스 다양성', hidden:false},
+  {id:60, icon:'🗾', name:'코스 마스터', desc:'코스 10개 등록', cat:'코스 다양성', hidden:false},
+  {id:61, icon:'🏅', name:'코스 레전드', desc:'코스 20개 등록', cat:'코스 다양성', hidden:false},
+  {id:62, icon:'🔁', name:'단골 코스', desc:'같은 코스 10회 주행', cat:'코스 다양성', hidden:false},
+  {id:63, icon:'💘', name:'최애 코스', desc:'같은 코스 30회 주행', cat:'코스 다양성', hidden:false},
+  {id:64, icon:'🆕', name:'새 코스 개척', desc:'2번째 신규 코스 등록', cat:'코스 다양성', hidden:false},
+  {id:65, icon:'🎒', name:'주말 탐험가', desc:'토·일 라이딩 5회', cat:'코스 다양성', hidden:false},
+  {id:66, icon:'🚩', name:'코스 올스타', desc:'등록된 모든 코스 각 3회 이상', cat:'코스 다양성', hidden:false},
+  {id:67, icon:'🌄', name:'장거리 코스', desc:'50km 이상 라이딩 5회', cat:'코스 다양성', hidden:false},
+  {id:68, icon:'🏙', name:'도심 라이더', desc:'라이딩 총 20회 이상', cat:'코스 다양성', hidden:false},
+  // 특별한 날 (69-81)
+  {id:69, icon:'🎂', name:'생일 라이딩', desc:'생일에 라이딩 (설정에서 생일 입력)', cat:'특별한 날', hidden:false},
+  {id:70, icon:'🎆', name:'새해 첫 라이딩', desc:'1월 1일 라이딩', cat:'특별한 날', hidden:false},
+  {id:71, icon:'🎊', name:'1주년', desc:'앱 첫 사용 1주년', cat:'특별한 날', hidden:false},
+  {id:72, icon:'🎉', name:'2주년', desc:'앱 첫 사용 2주년', cat:'특별한 날', hidden:false},
+  {id:73, icon:'🏔', name:'크리스마스', desc:'12월 25일 라이딩', cat:'특별한 날', hidden:false},
+  {id:74, icon:'🌸', name:'어버이날', desc:'5월 8일 라이딩', cat:'특별한 날', hidden:false},
+  {id:75, icon:'🎑', name:'추석 라이딩', desc:'추석 당일 라이딩', cat:'특별한 날', hidden:false},
+  {id:76, icon:'🌕', name:'보름달 라이딩', desc:'음력 15일 라이딩', cat:'특별한 날', hidden:false},
+  {id:77, icon:'💝', name:'발렌타인', desc:'2월 14일 라이딩', cat:'특별한 날', hidden:false},
+  {id:78, icon:'🌹', name:'로즈데이', desc:'5월 14일 라이딩', cat:'특별한 날', hidden:false},
+  {id:79, icon:'🎐', name:'어린이날', desc:'5월 5일 라이딩', cat:'특별한 날', hidden:false},
+  {id:80, icon:'🏋️', name:'체육의 날', desc:'10월 셋째 토요일 라이딩', cat:'특별한 날', hidden:false},
+  {id:81, icon:'🌟', name:'100번째 기록', desc:'100번째 라이딩', cat:'특별한 날', hidden:false},
+  // 칭호 뱃지 (82-91)
+  {id:82, icon:'🌱', name:'새싹 라이더', desc:'새싹 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:83, icon:'🚲', name:'동네 라이더', desc:'동네 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:84, icon:'🚴', name:'진짜 라이더', desc:'진짜 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:85, icon:'⚡️', name:'천 킬로 사나이', desc:'천 킬로 사나이 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:86, icon:'🔥', name:'철각의 사나이', desc:'철각의 사나이 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:87, icon:'💎', name:'다이아 라이더', desc:'다이아 라이더 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:88, icon:'🏆', name:'라이딩 챔피언', desc:'라이딩 챔피언 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:89, icon:'👑', name:'페달의 왕', desc:'페달의 왕 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:90, icon:'🌟', name:'라이딩 마스터', desc:'라이딩 마스터 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  {id:91, icon:'🚀', name:'전설의 페달러', desc:'전설의 페달러 칭호 달성', cat:'칭호 뱃지', hidden:false},
+  // 히든 뱃지 (92-100)
+  {id:92, icon:'🎩', name:'신사 라이더', desc:'메모 50회 이상 작성', cat:'히든 뱃지', hidden:true},
+  {id:93, icon:'📸', name:'사진작가', desc:'사진 첨부 30회 이상', cat:'히든 뱃지', hidden:true},
+  {id:94, icon:'🧹', name:'꼼꼼한 라이더', desc:'모든 항목 완성 입력 20회', cat:'히든 뱃지', hidden:true},
+  {id:95, icon:'🌙', name:'몽환의 라이더', desc:'새벽(4시 이전)+야간(21시 이후) 각 5회 이상', cat:'히든 뱃지', hidden:true},
+  {id:96, icon:'🎶', name:'리듬 라이더', desc:'매주 같은 요일 라이딩 8주 연속', cat:'히든 뱃지', hidden:true},
+  {id:97, icon:'🦋', name:'변신 라이더', desc:'코스 10개 이상 + 날씨 3종 이상', cat:'히든 뱃지', hidden:true},
+  {id:98, icon:'🏄', name:'서퍼 라이더', desc:'비+바람 동시 날씨에 라이딩', cat:'히든 뱃지', hidden:true},
+  {id:99, icon:'🧙', name:'마법의 숫자', desc:'라이딩 거리 정확히 42.195km 입력', cat:'히든 뱃지', hidden:true},
+  {id:100, icon:'🌌', name:'우주 라이더', desc:'누적 100,000km 달성', cat:'히든 뱃지', hidden:true},
+];
+
+// ===== 뱃지 조건 계산 =====
+function checkAllBadges() {
+  const prev = [...earnedBadges];
+  const newBadges = computeEarnedBadges();
+  earnedBadges = newBadges;
+  saveBadges();
+
+  const gained = newBadges.filter(id => !prev.includes(id));
+  if (gained.length > 0) {
+    showBadgePopups(gained, 0);
+  }
+}
+
+function computeEarnedBadges() {
+  const earned = [];
+  const total = records.reduce((s, r) => s + (r.dist||0), 0);
+  const count = records.length;
+
+  // 거리 달성
+  if (count >= 1) earned.push(1);
+  const distMilestones = [[2,10],[3,30],[4,50],[5,100],[6,300],[7,500],[8,1000],[9,2000],[10,3000],[11,4000],[12,5000],[13,7500],[14,10000],[15,20000],[16,30000],[17,40000],[18,50000],[100,100000]];
+  distMilestones.forEach(([id,km]) => { if (total >= km) earned.push(id); });
+
+  // 횟수 달성
+  const countMilestones = [[19,5],[20,10],[21,30],[22,50],[23,70],[24,100],[25,150],[26,200],[27,250],[28,300]];
+  countMilestones.forEach(([id,n]) => { if (count >= n) earned.push(id); });
+
+  // 날씨 기반
+  const weatherCounts = {맑음:0, 흐림:0, 구름:0, 비:0, 눈:0, 바람:0};
+  records.forEach(r => (r.weather||[]).forEach(w => { if (weatherCounts[w] !== undefined) weatherCounts[w]++; }));
+  if (weatherCounts['맑음'] >= 10) earned.push(29);
+  if (weatherCounts['비'] >= 1) earned.push(30);
+  if (weatherCounts['비'] >= 5) earned.push(31);
+  if (weatherCounts['눈'] >= 1) earned.push(32);
+  if (weatherCounts['눈'] >= 5) earned.push(33);
+  if (weatherCounts['바람'] >= 10) earned.push(34);
+  if (weatherCounts['흐림'] >= 10) earned.push(40);
+  const badWeather = weatherCounts['비'] + weatherCounts['눈'] + weatherCounts['바람'];
+  if (badWeather >= 20) earned.push(41);
+
+  // 계절 기반
+  const byMonth = {};
+  records.forEach(r => {
+    const m = parseInt(r.date.slice(5,7));
+    byMonth[m] = (byMonth[m]||0) + 1;
+  });
+  const summerRides = (byMonth[7]||0) + (byMonth[8]||0);
+  const winterRides = (byMonth[12]||0) + (byMonth[1]||0);
+  const springRides = (byMonth[3]||0) + (byMonth[4]||0) + (byMonth[5]||0);
+  const fallRides = (byMonth[9]||0) + (byMonth[10]||0) + (byMonth[11]||0);
+  if (summerRides >= 10) earned.push(35);
+  if (winterRides >= 10) earned.push(36);
+  if (springRides >= 12) earned.push(37);
+  if (fallRides >= 12) earned.push(38);
+  if ((byMonth[3]||0)+(byMonth[4]||0)+(byMonth[5]||0) > 0 && summerRides > 0 && fallRides > 0 && winterRides > 0) earned.push(39);
+  if ((byMonth[8]||0) >= 5) earned.push(42);
+
+  // 눈비 동시
+  const hasSnowRain = records.some(r => (r.weather||[]).includes('비') && (r.weather||[]).includes('눈'));
+  if (hasSnowRain) earned.push(43);
+
+  // 비+바람 동시
+  const hasSurfer = records.some(r => (r.weather||[]).includes('비') && (r.weather||[]).includes('바람'));
+  if (hasSurfer) earned.push(98);
+
+  // 속도/강도
+  if (records.some(r => r.dist >= 30)) earned.push(44);
+  if (records.some(r => r.dist >= 50)) earned.push(45);
+  if (records.some(r => r.dist >= 100)) earned.push(46);
+  if (records.some(r => r.dist >= 150)) earned.push(47);
+  if (records.some(r => r.dist >= 200)) earned.push(48);
+  if (records.some(r => (r.hour||0)*60+(r.min||0) >= 180)) earned.push(49);
+  if (records.some(r => (r.hour||0)*60+(r.min||0) >= 300)) earned.push(50);
+  if (records.some(r => (r.hour||0)*60+(r.min||0) >= 480)) earned.push(51);
+  if (records.some(r => (r.hour||0)*60+(r.min||0) >= 600)) earned.push(52);
+
+  // 월 500km
+  const monthlyDist = {};
+  records.forEach(r => {
+    const key = r.date.slice(0,7);
+    monthlyDist[key] = (monthlyDist[key]||0) + (r.dist||0);
+  });
+  const months500 = Object.values(monthlyDist).filter(v => v >= 500).length;
+  if (months500 >= 1) earned.push(53);
+  if (months500 >= 3) earned.push(54);
+
+  // 3개월 연속 100km
+  const monthKeys = Object.keys(monthlyDist).sort();
+  let consec = 0, maxConsec = 0;
+  monthKeys.forEach((k, i) => {
+    if (monthlyDist[k] >= 100) {
+      if (i > 0) {
+        const prev = monthKeys[i-1];
+        const [py, pm] = prev.split('-').map(Number);
+        const [cy, cm] = k.split('-').map(Number);
+        if ((cy*12+cm) - (py*12+pm) === 1) { consec++; } else { consec = 1; }
+      } else { consec = 1; }
+      maxConsec = Math.max(maxConsec, consec);
+    } else { consec = 0; }
+  });
+  if (maxConsec >= 3) earned.push(55);
+
+  // 연간 3000km
+  const yearlyDist = {};
+  records.forEach(r => {
+    const y = r.date.slice(0,4);
+    yearlyDist[y] = (yearlyDist[y]||0) + (r.dist||0);
+  });
+  if (Object.values(yearlyDist).some(v => v >= 3000)) earned.push(56);
+
+  // 코스 다양성
+  const courses = new Set(records.filter(r => r.course).map(r => r.course));
+  if (courses.size >= 1) earned.push(57);
+  if (courses.size >= 2) earned.push(64);
+  if (courses.size >= 3) earned.push(58);
+  if (courses.size >= 5) earned.push(59);
+  if (courses.size >= 10) earned.push(60);
+  if (courses.size >= 20) earned.push(61);
+
+  const courseCounts = {};
+  records.forEach(r => { if (r.course) courseCounts[r.course] = (courseCounts[r.course]||0) + 1; });
+  const maxCourse = Math.max(0, ...Object.values(courseCounts));
+  if (maxCourse >= 10) earned.push(62);
+  if (maxCourse >= 30) earned.push(63);
+
+  // 주말 라이딩
+  const weekendCount = records.filter(r => {
+    const d = new Date(r.date);
+    return d.getDay() === 0 || d.getDay() === 6;
+  }).length;
+  if (weekendCount >= 5) earned.push(65);
+
+  // 코스 올스타
+  if (courses.size > 0 && [...courses].every(c => (courseCounts[c]||0) >= 3)) earned.push(66);
+
+  // 장거리 코스 5회
+  if (records.filter(r => r.dist >= 50).length >= 5) earned.push(67);
+
+  // 도심 라이더
+  if (count >= 20) earned.push(68);
+
+  // 특별한 날
+  records.forEach(r => {
+    const d = r.date;
+    const mm = d.slice(5,7), dd = d.slice(8,10);
+    if (mm === '01' && dd === '01') earned.push(70);
+    if (mm === '12' && dd === '25') earned.push(73);
+    if (mm === '05' && dd === '08') earned.push(74);
+    if (mm === '02' && dd === '14') earned.push(77);
+    if (mm === '05' && dd === '14') earned.push(78);
+    if (mm === '05' && dd === '05') earned.push(79);
+
+    // 체육의 날: 10월 셋째 토요일
+    if (mm === '10') {
+      const dt = new Date(d);
+      if (dt.getDay() === 6) {
+        const dayOfMonth = parseInt(dd);
+        if (dayOfMonth >= 15 && dayOfMonth <= 21) earned.push(80);
+      }
+    }
+
+    // 생일
+    if (settings.birthday) {
+      const bm = settings.birthday.slice(5,7), bd = settings.birthday.slice(8,10);
+      if (mm === bm && dd === bd) earned.push(69);
+    }
+  });
+
+  // 1주년/2주년
+  if (settings.firstUse) {
+    const first = new Date(settings.firstUse);
+    records.forEach(r => {
+      const rd = new Date(r.date);
+      const diff = (rd - first) / (1000*60*60*24);
+      if (diff >= 365 && diff < 366) earned.push(71);
+      if (diff >= 730 && diff < 731) earned.push(72);
+    });
+  }
+
+  // 100번째 기록
+  if (count >= 100) earned.push(81);
+
+  // 음력 관련 (추석, 보름달) - 간단 계산
+  records.forEach(r => {
+    const lunar = getLunar(r.date);
+    if (lunar) {
+      if (lunar.month === 8 && lunar.day === 15) earned.push(75);
+      if (lunar.day === 15) earned.push(76);
+    }
+  });
+
+  // 칭호 뱃지 (칭호 달성 후 획득)
+  // 칭호 뱃지는 earned(비칭호) 수 기준이 아닌 비칭호 뱃지 수로 계산해야 하나,
+  // 순환 방지를 위해 현재 획득 뱃지 수 기준으로 계산
+  const nonTitleBadges = earned.filter(id => id < 82).length;
+  if (nonTitleBadges >= 0) earned.push(82); // 새싹은 기본
+  if (nonTitleBadges >= 5) earned.push(83);
+  if (nonTitleBadges >= 10) earned.push(84);
+  if (nonTitleBadges >= 20) earned.push(85);
+  if (nonTitleBadges >= 30) earned.push(86);
+  if (nonTitleBadges >= 40) earned.push(87);
+  if (nonTitleBadges >= 50) earned.push(88);
+  if (nonTitleBadges >= 60) earned.push(89);
+  if (nonTitleBadges >= 75) earned.push(90);
+  if (nonTitleBadges >= 90) earned.push(91);
+
+  // 히든 뱃지
+  const memoCount = records.filter(r => r.memo && r.memo.trim()).length;
+  if (memoCount >= 50) earned.push(92);
+
+  const photoCount = records.filter(r => r.photo).length;
+  if (photoCount >= 30) earned.push(93);
+
+  const fullCount = records.filter(r =>
+    r.date && r.time && r.dist && (r.hour || r.min) && r.course && r.weather && r.weather.length > 0 && r.memo && r.photo
+  ).length;
+  if (fullCount >= 20) earned.push(94);
+
+  const earlyRides = records.filter(r => r.time && parseInt(r.time.slice(0,2)) < 4).length;
+  const lateRides = records.filter(r => r.time && parseInt(r.time.slice(0,2)) >= 21).length;
+  if (earlyRides >= 5 && lateRides >= 5) earned.push(95);
+
+  // 리듬 라이더: 매주 같은 요일 8주 연속
+  if (checkRhythmRider()) earned.push(96);
+
+  // 변신 라이더
+  const weatherTypes = new Set(records.flatMap(r => r.weather||[]));
+  if (courses.size >= 10 && weatherTypes.size >= 3) earned.push(97);
+
+  // 마법의 숫자
+  if (records.some(r => Math.abs(r.dist - 42.195) < 0.001)) earned.push(99);
+
+  return [...new Set(earned)];
+}
+
+function checkRhythmRider() {
+  if (records.length < 8) return false;
+  // 날짜별로 요일 추출
+  const byWeekday = {};
+  records.forEach(r => {
+    const d = new Date(r.date);
+    const wd = d.getDay();
+    if (!byWeekday[wd]) byWeekday[wd] = [];
+    // ISO 주차 번호
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const week = Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+    byWeekday[wd].push(d.getFullYear() * 100 + week);
+  });
+  for (const wd in byWeekday) {
+    const weeks = [...new Set(byWeekday[wd])].sort((a,b) => a-b);
+    if (weeks.length < 8) continue;
+    let consec = 1;
+    for (let i = 1; i < weeks.length; i++) {
+      // 주차 연속 체크 (연도 경계 무시 위해 단순 연속 체크)
+      const diff = weeks[i] - weeks[i-1];
+      if (diff === 1 || diff === 99) { // 99 = 새해 넘어가는 경우 근사
+        consec++;
+        if (consec >= 8) return true;
+      } else {
+        consec = 1;
+      }
+    }
+  }
+  return false;
+}
+
+// ===== 음력 계산 (간단 버전) =====
+function getLunar(dateStr) {
+  // 간단한 음력 근사 계산 (완전하지 않으나 실용적)
+  try {
+    const d = new Date(dateStr);
+    // 음력은 복잡하므로 간단한 근사값 사용
+    // 1900-01-31 = 음력 1900-01-01
+    const baseDate = new Date(1900, 0, 31);
+    const diffDays = Math.floor((d - baseDate) / (1000*60*60*24));
+    // 음력 한 달 평균 29.5306일
+    const lunarDay1900 = 1;
+    let days = diffDays;
+    // 음력 월 길이 배열 사용 없이 근사
+    const monthLen = 29.5306;
+    const totalMonths = Math.floor(days / monthLen);
+    const dayInMonth = Math.floor(days % monthLen) + 1;
+    const monthInYear = ((totalMonths % 12) + 12) % 12 + 1;
+    return { month: monthInYear, day: dayInMonth };
+  } catch(e) { return null; }
+}
+
+// ===== 뱃지 팝업 =====
+let popupQueue = [];
+function showBadgePopups(ids, idx) {
+  if (idx >= ids.length) return;
+  const id = ids[idx];
+  const badge = BADGES.find(b => b.id === id);
+  if (!badge) { showBadgePopups(ids, idx+1); return; }
+  document.getElementById('popup-icon').textContent = badge.icon;
+  document.getElementById('popup-name').textContent = badge.name;
+  document.getElementById('popup-desc').textContent = badge.desc;
+  document.getElementById('badge-popup').classList.add('show');
+  popupQueue = ids.slice(idx+1);
+}
+function closeBadgePopup() {
+  document.getElementById('badge-popup').classList.remove('show');
+  if (popupQueue.length > 0) {
+    const next = popupQueue.shift();
+    setTimeout(() => showBadgePopups([next, ...popupQueue], 0), 300);
+    popupQueue = [];
+  }
+  renderHome();
+}
+
+// ===== 뱃지 탭 렌더링 =====
+function renderBadges() {
+  const cur = earnedBadges.length;
+  const ti = getTitleInfo(cur);
+  document.getElementById('bt-icon').textContent = ti.icon;
+  document.getElementById('bt-name').textContent = ti.name;
+  document.getElementById('bt-sub').textContent =
+    `뱃지 ${cur}/100개 획득 · ${ti.nextAt ? '다음 칭호까지 '+(ti.nextAt-cur)+'개' : '최고 칭호 달성!'}`;
+  const pct = ti.nextAt ? Math.min(100, Math.round((cur - ti.from) / (ti.nextAt - ti.from) * 100)) : 100;
+  document.getElementById('bt-progress').style.width = pct + '%';
+
+  const cats = [...new Set(BADGES.map(b => b.cat))];
+  const container = document.getElementById('badge-container');
+  container.innerHTML = cats.map(cat => {
+    const catBadges = BADGES.filter(b => b.cat === cat);
+    return `
+      <div class="badge-cat-title">${catIcon(cat)} ${cat} (${catBadges.filter(b => earnedBadges.includes(b.id)).length}/${catBadges.length})</div>
+      <div class="badge-grid">
+        ${catBadges.map(b => {
+          const e = earnedBadges.includes(b.id);
+          const isHidden = b.hidden && !e;
+          return `<div class="badge-item ${e?'earned':''} ${isHidden?'hidden':''}"
+            onclick="showBadgeTip(event,${b.id})"
+            style="${e?'box-shadow:0 0 0 1.5px #ffd700':''}"
+          >
+            <div class="b-icon">${isHidden?'❓':b.icon}</div>
+            <div class="b-name">${isHidden?'???':b.name}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function catIcon(cat) {
+  const m = {'거리 달성':'🏁','횟수 달성':'🔢','계절/날씨':'🌦','속도/강도':'⚡️','코스 다양성':'🗺','특별한 날':'🎂','칭호 뱃지':'🏆','히든 뱃지':'🎁'};
+  return m[cat]||'';
+}
+
+let tipTimeout;
+function showBadgeTip(e, id) {
+  const badge = BADGES.find(b => b.id === id);
+  if (!badge) return;
+  const isHidden = badge.hidden && !earnedBadges.includes(id);
+  const tip = document.getElementById('badge-tooltip');
+  tip.textContent = isHidden ? '히든 뱃지: 조건을 달성하면 공개됩니다' : `${badge.icon} ${badge.name}: ${badge.desc}`;
+  tip.classList.add('show');
+  clearTimeout(tipTimeout);
+  tipTimeout = setTimeout(() => tip.classList.remove('show'), 2500);
+}
+
+// ===== 통계 탭 =====
+function switchStatTab(name, btn) {
+  document.querySelectorAll('.stats-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stats-section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('stat-' + name).classList.add('active');
+}
+
+function renderStats() {
+  renderStatTotal();
+  renderStatYear();
+  renderStatMonth();
+}
+
+function renderStatTotal() {
+  const total = records.reduce((s,r) => s+(r.dist||0), 0);
+  const totalMins = records.reduce((s,r) => s+(r.hour||0)*60+(r.min||0), 0);
+  const count = records.length;
+  const avg = count ? (total/count).toFixed(1) : 0;
+
+  // 연도별
+  const yearlyDist = {};
+  records.forEach(r => {
+    const y = r.date.slice(0,4);
+    yearlyDist[y] = (yearlyDist[y]||0) + (r.dist||0);
+  });
+  const years = Object.keys(yearlyDist).sort();
+
+  // 최장 라이딩
+  const maxRide = records.length ? records.reduce((m,r) => r.dist>m.dist?r:m, records[0]) : null;
+  // 최다 월
+  const monthlyCounts = {};
+  records.forEach(r => {
+    const k = r.date.slice(0,7);
+    monthlyCounts[k] = (monthlyCounts[k]||0)+1;
+  });
+  const maxMonthKey = Object.keys(monthlyCounts).sort((a,b) => monthlyCounts[b]-monthlyCounts[a])[0];
+
+  document.getElementById('stat-total').innerHTML = `
+    <div class="stats-2grid">
+      ${statCard('총 거리', total.toFixed(1)+'km', '')}
+      ${statCard('총 시간', fmtMins(totalMins), '')}
+      ${statCard('총 횟수', count+'회', '')}
+      ${statCard('평균 거리', avg+'km', '')}
+    </div>
+    <div class="bar-chart">
+      <div class="bar-chart-title">연도별 총 거리</div>
+      ${barChart(years, years.map(y => yearlyDist[y]))}
+    </div>
+    <div class="stats-2grid">
+      ${statCard('최장 라이딩', maxRide ? maxRide.dist+'km' : '-', maxRide ? maxRide.course||maxRide.date : '')}
+      ${statCard('최다 라이딩 월', maxMonthKey||'-', maxMonthKey ? monthlyCounts[maxMonthKey]+'회' : '')}
+    </div>
+  `;
+}
+
+function renderStatYear() {
+  const year = new Date().getFullYear().toString();
+  const yearRecs = records.filter(r => r.date.startsWith(year));
+  const total = yearRecs.reduce((s,r) => s+(r.dist||0), 0);
+  const count = yearRecs.length;
+
+  const monthlyDist = {};
+  for (let m=1;m<=12;m++) monthlyDist[String(m).padStart(2,'0')] = 0;
+  yearRecs.forEach(r => {
+    const m = r.date.slice(5,7);
+    monthlyDist[m] = (monthlyDist[m]||0) + (r.dist||0);
+  });
+  const months = Object.keys(monthlyDist).sort();
+  const maxRide = yearRecs.length ? yearRecs.reduce((m,r) => r.dist>m.dist?r:m, yearRecs[0]) : null;
+  const avg = count ? (total/count).toFixed(1) : 0;
+
+  document.getElementById('stat-year').innerHTML = `
+    <div class="stats-2grid">
+      ${statCard('올해 거리', total.toFixed(1)+'km', '')}
+      ${statCard('올해 횟수', count+'회', '')}
+    </div>
+    <div class="bar-chart">
+      <div class="bar-chart-title">올해 월별 거리</div>
+      ${barChart(months.map(m=>m+'월'), months.map(m => monthlyDist[m]))}
+    </div>
+    <div class="stats-2grid">
+      ${statCard('올해 최장', maxRide ? maxRide.dist+'km' : '-', maxRide ? maxRide.course||maxRide.date : '')}
+      ${statCard('올해 평균', avg+'km', '')}
+    </div>
+  `;
+}
+
+function renderStatMonth() {
+  const now = new Date();
+  const ym = now.toISOString().slice(0,7);
+  const prevDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const prevYm = prevDate.toISOString().slice(0,7);
+
+  const mRecs = records.filter(r => r.date.startsWith(ym));
+  const pRecs = records.filter(r => r.date.startsWith(prevYm));
+  const mTotal = mRecs.reduce((s,r) => s+(r.dist||0), 0);
+  const pTotal = pRecs.reduce((s,r) => s+(r.dist||0), 0);
+  const mCount = mRecs.length;
+  const pCount = pRecs.length;
+  const diffDist = mTotal - pTotal;
+  const diffCount = mCount - pCount;
+
+  // 최근 6개월
+  const months6 = [];
+  for (let i=5;i>=0;i--) {
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    months6.push(d.toISOString().slice(0,7));
+  }
+  const m6dist = months6.map(m => records.filter(r=>r.date.startsWith(m)).reduce((s,r)=>s+(r.dist||0),0));
+
+  const maxRide = mRecs.length ? mRecs.reduce((m,r) => r.dist>m.dist?r:m, mRecs[0]) : null;
+  const avg = mCount ? (mTotal/mCount).toFixed(1) : 0;
+
+  document.getElementById('stat-month').innerHTML = `
+    <div class="stats-2grid">
+      ${statCard('이번 달 거리', mTotal.toFixed(1)+'km', (diffDist>=0?'+':'')+diffDist.toFixed(1)+'km vs 지난달')}
+      ${statCard('이번 달 횟수', mCount+'회', (diffCount>=0?'+':'')+diffCount+'회 vs 지난달')}
+    </div>
+    <div class="bar-chart">
+      <div class="bar-chart-title">최근 6개월 거리</div>
+      ${barChart(months6.map(m=>m.slice(5)+'월'), m6dist)}
+    </div>
+    <div class="stats-2grid">
+      ${statCard('이달 최장', maxRide ? maxRide.dist+'km' : '-', '')}
+      ${statCard('이달 평균', avg+'km', '')}
+    </div>
+  `;
+}
+
+function statCard(label, val, sub) {
+  return `<div class="stat-card">
+    <div class="stat-card-val">${val}</div>
+    <div class="stat-card-label">${label}</div>
+    ${sub?`<div class="stat-card-sub">${sub}</div>`:''}
+  </div>`;
+}
+
+function barChart(labels, values) {
+  const max = Math.max(...values, 1);
+  return `<div class="bars">
+    ${labels.map((l,i) => `
+      <div class="bar-col">
+        <div class="bar-val">${values[i]>0?Math.round(values[i]):''}</div>
+        <div class="bar" style="height:${Math.round(values[i]/max*80)+2}px"></div>
+        <div class="bar-label">${l}</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function fmtMins(mins) {
+  if (!mins) return '0h';
+  const h = Math.floor(mins/60), m = mins%60;
+  return h ? h+'h '+m+'m' : m+'m';
+}
+
+// ===== 설정 =====
+function openSettings() {
+  if (settings.birthday) document.getElementById('s-birthday').value = settings.birthday;
+  document.getElementById('settings-popup').classList.add('show');
+}
+function closeSettings() {
+  document.getElementById('settings-popup').classList.remove('show');
+}
+function saveSettings() {
+  settings.birthday = document.getElementById('s-birthday').value;
+  saveSettings2();
+  closeSettings();
+  checkAllBadges();
+}
+
+// ===== 초기화 =====
+function init() {
+  // 날짜 기본값 오늘
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('f-date').value = today;
+  // 현재 시간 기본값
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('f-time').value = hh+':'+mm;
+
+  checkAllBadges();
+  renderHome();
+}
+
+init();
+</script>
+</body>
+</html>
