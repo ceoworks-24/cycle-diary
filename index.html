@@ -781,20 +781,21 @@ const BADGES = [
   {id:66, icon:'🚩', name:'코스 올스타', desc:'등록된 모든 코스 각 3회 이상', cat:'코스 다양성', hidden:false},
   {id:67, icon:'🌄', name:'장거리 코스', desc:'50km 이상 라이딩 5회', cat:'코스 다양성', hidden:false},
   {id:68, icon:'🏙', name:'도심 라이더', desc:'라이딩 총 20회 이상', cat:'코스 다양성', hidden:false},
-  // 특별한 날 (69-81)
-  {id:69, icon:'🎂', name:'생일 라이딩', desc:'생일에 라이딩 (설정에서 생일 입력)', cat:'특별한 날', hidden:false},
-  {id:70, icon:'🎆', name:'새해 첫 라이딩', desc:'1월 1일 라이딩', cat:'특별한 날', hidden:false},
-  {id:71, icon:'🎊', name:'1주년', desc:'앱 첫 사용 1주년', cat:'특별한 날', hidden:false},
-  {id:72, icon:'🎉', name:'2주년', desc:'앱 첫 사용 2주년', cat:'특별한 날', hidden:false},
-  {id:73, icon:'🏔', name:'크리스마스', desc:'12월 25일 라이딩', cat:'특별한 날', hidden:false},
-  {id:74, icon:'🌸', name:'어버이날', desc:'5월 8일 라이딩', cat:'특별한 날', hidden:false},
-  {id:75, icon:'🎑', name:'추석 라이딩', desc:'추석 당일 라이딩', cat:'특별한 날', hidden:false},
-  {id:76, icon:'🌕', name:'보름달 라이딩', desc:'음력 15일 라이딩', cat:'특별한 날', hidden:false},
-  {id:77, icon:'💝', name:'발렌타인', desc:'2월 14일 라이딩', cat:'특별한 날', hidden:false},
-  {id:78, icon:'🌹', name:'로즈데이', desc:'5월 14일 라이딩', cat:'특별한 날', hidden:false},
-  {id:79, icon:'🎐', name:'어린이날', desc:'5월 5일 라이딩', cat:'특별한 날', hidden:false},
-  {id:80, icon:'🏋️', name:'체육의 날', desc:'10월 셋째 토요일 라이딩', cat:'특별한 날', hidden:false},
-  {id:81, icon:'🌟', name:'100번째 기록', desc:'100번째 라이딩', cat:'특별한 날', hidden:false},
+  // 거리 달성 추가 (69-70, 73-80) + 횟수 달성 (71-72)
+  {id:69, icon:'🌿', name:'200km', desc:'누적 200km 달성', cat:'거리 달성', hidden:false},
+  {id:70, icon:'🚵', name:'700km', desc:'누적 700km 달성', cat:'거리 달성', hidden:false},
+  {id:71, icon:'🎊', name:'1주년', desc:'앱 첫 사용 1주년', cat:'횟수 달성', hidden:false},
+  {id:72, icon:'🎉', name:'2주년', desc:'앱 첫 사용 2주년', cat:'횟수 달성', hidden:false},
+  {id:73, icon:'🔆', name:'1,500km', desc:'누적 1,500km 달성', cat:'거리 달성', hidden:false},
+  {id:74, icon:'🌙', name:'2,500km', desc:'누적 2,500km 달성', cat:'거리 달성', hidden:false},
+  {id:75, icon:'🛸', name:'6,000km', desc:'누적 6,000km 달성', cat:'거리 달성', hidden:false},
+  {id:76, icon:'🌠', name:'8,500km', desc:'누적 8,500km 달성', cat:'거리 달성', hidden:false},
+  {id:77, icon:'🗼', name:'15,000km', desc:'누적 15,000km 달성', cat:'거리 달성', hidden:false},
+  {id:78, icon:'🌋', name:'25,000km', desc:'누적 25,000km 달성', cat:'거리 달성', hidden:false},
+  {id:79, icon:'🌊', name:'35,000km', desc:'누적 35,000km 달성', cat:'거리 달성', hidden:false},
+  {id:80, icon:'🪐', name:'45,000km', desc:'누적 45,000km 달성', cat:'거리 달성', hidden:false},
+  // 히든 뱃지 추가
+  {id:81, icon:'🔥', name:'불꽃 라이더', desc:'비+눈+바람 날씨 모두 기록', cat:'히든 뱃지', hidden:true},
   // 칭호 뱃지 (82-91)
   {id:82, icon:'🌱', name:'새싹 라이더', desc:'일반 뱃지 1개 이상 획득', cat:'칭호 뱃지', hidden:false},
   {id:83, icon:'🚲', name:'동네 라이더', desc:'일반 뱃지 5개 이상 획득', cat:'칭호 뱃지', hidden:false},
@@ -838,7 +839,14 @@ function computeEarnedBadges() {
 
   // 거리 달성
   if (count >= 1) earned.push(1);
-  const distMilestones = [[2,10],[3,30],[4,50],[5,100],[6,300],[7,500],[8,1000],[9,2000],[10,3000],[11,4000],[12,5000],[13,7500],[14,10000],[15,20000],[16,30000],[17,40000],[18,50000],[100,100000]];
+  const distMilestones = [
+    [2,10],[3,30],[4,50],[5,100],
+    [69,200],[6,300],[7,500],[70,700],[8,1000],
+    [73,1500],[9,2000],[74,2500],[10,3000],[11,4000],[12,5000],
+    [75,6000],[13,7500],[76,8500],[14,10000],[77,15000],[15,20000],
+    [78,25000],[16,30000],[79,35000],[17,40000],[80,45000],[18,50000],
+    [100,100000]
+  ];
   distMilestones.forEach(([id,km]) => { if (total >= km) earned.push(id); });
 
   // 횟수 달성
@@ -959,34 +967,7 @@ function computeEarnedBadges() {
   // 도심 라이더
   if (count >= 20) earned.push(68);
 
-  // 특별한 날
-  records.forEach(r => {
-    const d = r.date;
-    const mm = d.slice(5,7), dd = d.slice(8,10);
-    if (mm === '01' && dd === '01') earned.push(70);
-    if (mm === '12' && dd === '25') earned.push(73);
-    if (mm === '05' && dd === '08') earned.push(74);
-    if (mm === '02' && dd === '14') earned.push(77);
-    if (mm === '05' && dd === '14') earned.push(78);
-    if (mm === '05' && dd === '05') earned.push(79);
-
-    // 체육의 날: 10월 셋째 토요일
-    if (mm === '10') {
-      const dt = new Date(d);
-      if (dt.getDay() === 6) {
-        const dayOfMonth = parseInt(dd);
-        if (dayOfMonth >= 15 && dayOfMonth <= 21) earned.push(80);
-      }
-    }
-
-    // 생일
-    if (settings.birthday) {
-      const bm = settings.birthday.slice(5,7), bd = settings.birthday.slice(8,10);
-      if (mm === bm && dd === bd) earned.push(69);
-    }
-  });
-
-  // 1주년/2주년
+  // 1주년/2주년 (횟수 달성 카테고리)
   if (settings.firstUse) {
     const first = new Date(settings.firstUse);
     records.forEach(r => {
@@ -996,18 +977,6 @@ function computeEarnedBadges() {
       if (diff >= 730 && diff < 731) earned.push(72);
     });
   }
-
-  // 100번째 기록
-  if (count >= 100) earned.push(81);
-
-  // 음력 관련 (추석, 보름달) - 간단 계산
-  records.forEach(r => {
-    const lunar = getLunar(r.date);
-    if (lunar) {
-      if (lunar.month === 8 && lunar.day === 15) earned.push(75);
-      if (lunar.day === 15) earned.push(76);
-    }
-  });
 
   // 칭호 뱃지 (칭호 달성 후 획득) — 칭호 뱃지(82~91) 제외한 일반 뱃지 수 기준
   const nonTitleBadges = earned.filter(id => id < 82 || id > 91).length;
@@ -1044,6 +1013,12 @@ function computeEarnedBadges() {
   // 변신 라이더
   const weatherTypes = new Set(records.flatMap(r => r.weather||[]));
   if (courses.size >= 10 && weatherTypes.size >= 3) earned.push(97);
+
+  // 불꽃 라이더: 비+눈+바람 날씨 모두 기록
+  const hasRain = records.some(r => (r.weather||[]).includes('비'));
+  const hasSnow = records.some(r => (r.weather||[]).includes('눈'));
+  const hasWind = records.some(r => (r.weather||[]).includes('바람'));
+  if (hasRain && hasSnow && hasWind) earned.push(81);
 
   // 마법의 숫자
   if (records.some(r => Math.abs(r.dist - 42.195) < 0.001)) earned.push(99);
@@ -1162,7 +1137,7 @@ function renderBadges() {
 }
 
 function catIcon(cat) {
-  const m = {'거리 달성':'🏁','횟수 달성':'🔢','계절/날씨':'🌦','속도/강도':'⚡️','코스 다양성':'🗺','특별한 날':'🎂','칭호 뱃지':'🏆','히든 뱃지':'🎁'};
+  const m = {'거리 달성':'🏁','횟수 달성':'🔢','계절/날씨':'🌦','속도/강도':'⚡️','코스 다양성':'🗺','칭호 뱃지':'🏆','히든 뱃지':'🎁'};
   return m[cat]||'';
 }
 
