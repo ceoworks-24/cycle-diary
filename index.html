@@ -80,8 +80,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .record-card-time{font-size:11px;color:#888;margin-top:2px}
 .record-card-memo{font-size:11px;color:#666;margin-top:6px;white-space:pre-wrap}
 .record-card-img{width:100%;border-radius:8px;margin-top:8px;max-height:150px;object-fit:cover}
-.delete-btn{position:absolute;top:10px;right:10px;background:none;border:none;font-size:16px;cursor:pointer;color:#ccc;padding:4px}
-.edit-btn{position:absolute;top:10px;right:36px;background:none;border:none;font-size:14px;cursor:pointer;color:#bbb;padding:4px}
+.card-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px;padding-top:8px;border-top:0.5px solid #f0f0f0}
+.card-edit-btn{background:none;border:1px solid #e0e0e0;border-radius:6px;font-size:12px;cursor:pointer;color:#888;padding:4px 10px}
+.card-del-btn{background:none;border:1px solid #fde0e0;border-radius:6px;font-size:12px;cursor:pointer;color:#e05555;padding:4px 10px}
+.photo-preview-grid{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.photo-thumb{position:relative;width:80px;height:80px}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;border-radius:6px;border:0.5px solid #e0e0e0}
+.photo-thumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:18px;text-align:center;padding:0}
 
 /* 뱃지 탭 */
 .badge-title-card{margin:16px 16px 12px;border-radius:16px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);padding:18px;color:#fff}
@@ -189,6 +194,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="card" style="padding:4px 16px">
       <div id="recent-list"><div class="no-data">기록이 없습니다</div></div>
     </div>
+    <div class="section-header">
+      <span class="section-title">📷 사진첩</span>
+    </div>
+    <div id="home-gallery" style="padding:0 16px 16px"></div>
   </div>
 
   <!-- 기록 탭 -->
@@ -234,8 +243,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <textarea id="f-memo" class="form-input" rows="3" placeholder="메모를 입력하세요..." style="resize:none"></textarea>
       </div>
       <div class="form-group">
-        <label class="form-label">사진 첨부 <span style="color:#bbb">(선택)</span></label>
-        <input type="file" id="f-photo" class="form-input" accept="image/*" style="padding:8px">
+        <label class="form-label">사진 첨부 <span style="color:#bbb">(최대 3장, 선택)</span></label>
+        <input type="file" id="f-photo" class="form-input" accept="image/*" multiple style="padding:8px" onchange="handlePhotoInput(this)">
+        <div id="photo-preview" class="photo-preview-grid"></div>
       </div>
       <button class="save-btn" id="save-btn" onclick="saveRecord()">저장하기</button>
       <button id="cancel-edit-btn" onclick="cancelEdit()" style="display:none;width:100%;padding:12px;border:1px solid #e0e0e0;border-radius:10px;background:#fff;font-size:14px;cursor:pointer;color:#888;margin-top:8px">수정 취소</button>
@@ -343,6 +353,7 @@ let records = JSON.parse(localStorage.getItem('cd_records') || '[]');
 let earnedBadges = JSON.parse(localStorage.getItem('cd_badges') || '[]');
 let settings = JSON.parse(localStorage.getItem('cd_settings') || '{}');
 let editingId = null;
+let pendingPhotos = [];
 if (!settings.firstUse) { settings.firstUse = new Date().toISOString().slice(0,10); saveSettings2(); }
 
 function saveRecords() { localStorage.setItem('cd_records', JSON.stringify(records)); }
@@ -367,6 +378,65 @@ function getSelectedWeather() {
   return [...document.querySelectorAll('.weather-btn.active')].map(b => b.dataset.w);
 }
 
+// ===== 사진 압축/처리 =====
+function getRecordPhotos(r) {
+  if (r.photos && r.photos.length) return r.photos;
+  if (r.photo) return [r.photo];
+  return [];
+}
+
+function compressImage(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoInput(input) {
+  const files = [...input.files];
+  input.value = '';
+  const remaining = 3 - pendingPhotos.length;
+  if (remaining <= 0) { alert('사진은 최대 3장까지 업로드할 수 있습니다.'); return; }
+  const toAdd = files.slice(0, remaining);
+  if (files.length > remaining) alert(`사진은 최대 3장까지 가능합니다. ${toAdd.length}장만 추가됩니다.`);
+  for (const file of toAdd) {
+    pendingPhotos.push(await compressImage(file));
+  }
+  renderPhotoPreview();
+}
+
+function removePendingPhoto(idx) {
+  pendingPhotos.splice(idx, 1);
+  renderPhotoPreview();
+}
+
+function renderPhotoPreview() {
+  const el = document.getElementById('photo-preview');
+  if (!el) return;
+  el.innerHTML = pendingPhotos.map((p, i) => `
+    <div class="photo-thumb">
+      <img src="${p}">
+      <button class="photo-thumb-del" onclick="removePendingPhoto(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
 // ===== 기록 저장 =====
 async function saveRecord() {
   const date = document.getElementById('f-date').value;
@@ -377,28 +447,23 @@ async function saveRecord() {
   const course = document.getElementById('f-course').value.trim();
   const weather = getSelectedWeather();
   const memo = document.getElementById('f-memo').value.trim();
-  const photoFile = document.getElementById('f-photo').files[0];
 
   if (!date) { alert('날짜를 입력하세요'); return; }
   if (!dist || dist <= 0) { alert('거리를 입력하세요'); return; }
-
-  let photo = '';
-  if (photoFile) {
-    photo = await fileToBase64(photoFile);
-  }
 
   if (editingId !== null) {
     const idx = records.findIndex(r => r.id === editingId);
     if (idx !== -1) {
       const existing = records[idx];
-      records[idx] = { ...existing, date, time, dist, hour, min, course, weather, memo, photo: photo || existing.photo };
+      const photos = pendingPhotos.length > 0 ? [...pendingPhotos] : getRecordPhotos(existing);
+      records[idx] = { ...existing, date, time, dist, hour, min, course, weather, memo, photos, photo: '' };
     }
     editingId = null;
     document.getElementById('form-title').textContent = '라이딩 기록 추가';
     document.getElementById('save-btn').textContent = '저장하기';
     document.getElementById('cancel-edit-btn').style.display = 'none';
   } else {
-    const rec = { id: Date.now(), date, time, dist, hour, min, course, weather, memo, photo };
+    const rec = { id: Date.now(), date, time, dist, hour, min, course, weather, memo, photos: [...pendingPhotos], photo: '' };
     records.unshift(rec);
   }
 
@@ -420,6 +485,8 @@ function resetForm() {
   document.getElementById('f-memo').value = '';
   document.getElementById('f-photo').value = '';
   document.querySelectorAll('.weather-btn.active').forEach(b => b.classList.remove('active'));
+  pendingPhotos = [];
+  renderPhotoPreview();
 }
 
 // ===== 기록 수정 =====
@@ -440,6 +507,8 @@ function editRecord(id) {
     const btn = document.querySelector(`.weather-btn[data-w="${w}"]`);
     if (btn) btn.classList.add('active');
   });
+  pendingPhotos = [...getRecordPhotos(r)];
+  renderPhotoPreview();
   document.getElementById('form-title').textContent = '라이딩 기록 수정';
   document.getElementById('save-btn').textContent = '수정 저장하기';
   document.getElementById('cancel-edit-btn').style.display = '';
@@ -480,13 +549,16 @@ function renderRecordList() {
   ) : records;
   const el = document.getElementById('records-list');
   if (!filtered.length) { el.innerHTML = '<div class="no-data">기록이 없습니다</div>'; return; }
-  el.innerHTML = filtered.map(r => `
-    <div class="record-card" onclick="openDetail(${r.id})">
-      <button class="delete-btn" onclick="event.stopPropagation();deleteRecord(${r.id})">✕</button>
-      <button class="edit-btn" onclick="event.stopPropagation();editRecord(${r.id})">✏️</button>
+  el.innerHTML = filtered.map(r => {
+    const photos = getRecordPhotos(r);
+    return `
+    <div class="record-card" data-id="${r.id}" onclick="openDetail(${r.id})">
       <div class="record-card-header">
-        <div>
-          <div class="record-card-date">${r.date}${r.time?' '+r.time:''}</div>
+        <div style="min-width:50px">
+          <div class="record-card-date">${r.date.slice(5)}</div>
+          ${r.time?`<div class="record-card-date">${r.time}</div>`:''}
+        </div>
+        <div style="flex:1;margin:0 8px">
           <div class="record-card-course">${r.course||'기록 없음'}</div>
           <div class="record-card-time">${fmtTime(r.hour,r.min)}</div>
         </div>
@@ -494,9 +566,13 @@ function renderRecordList() {
       </div>
       <div class="weather-tags">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
       ${r.memo?`<div class="record-card-memo">${escHtml(r.memo.slice(0,80))}${r.memo.length>80?'...':''}</div>`:''}
-      ${r.photo?`<img class="record-card-img" src="${r.photo}">`:''}
+      ${photos.length?`<div style="display:flex;gap:4px;margin-top:8px;flex-wrap:wrap">${photos.map(p=>`<img style="width:76px;height:60px;object-fit:cover;border-radius:6px;border:0.5px solid #e0e0e0" src="${p}">`).join('')}</div>`:''}
+      <div class="card-actions">
+        <button class="card-edit-btn" onclick="event.stopPropagation();editRecord(${r.id})">✏️ 수정</button>
+        <button class="card-del-btn" onclick="event.stopPropagation();deleteRecord(${r.id})">🗑️ 삭제</button>
+      </div>
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function fmtTime(h, m) {
@@ -524,7 +600,7 @@ function openDetail(id) {
     <div style="font-size:13px;color:#555;margin-bottom:10px">${fmtTime(r.hour,r.min)}</div>
     <div class="weather-tags" style="margin-bottom:10px">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
     ${r.memo?`<div style="font-size:13px;color:#444;white-space:pre-wrap;margin-bottom:10px">${escHtml(r.memo)}</div>`:''}
-    ${r.photo?`<img style="width:100%;border-radius:10px" src="${r.photo}">`:''}
+    ${getRecordPhotos(r).map(p=>`<img style="width:100%;border-radius:10px;margin-bottom:6px" src="${p}">`).join('')}
   `;
   document.getElementById('detail-overlay').classList.add('show');
 }
@@ -570,17 +646,44 @@ function renderHome() {
 
   const recent = records.slice(0, 3);
   const rl = document.getElementById('recent-list');
-  if (!recent.length) { rl.innerHTML = '<div class="no-data">기록이 없습니다</div>'; return; }
-  rl.innerHTML = recent.map(r => `
-    <div class="ride-item" onclick="switchTab('record')">
-      <div class="ride-date">${r.date.slice(5)}</div>
-      <div class="ride-info">
-        <div class="ride-course">${r.course||'기록 없음'}</div>
-        <div class="ride-km">${r.dist}km · ${fmtTime(r.hour,r.min)||'-'}</div>
-        <div class="weather-tags">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
+  if (!recent.length) {
+    rl.innerHTML = '<div class="no-data">기록이 없습니다</div>';
+  } else {
+    rl.innerHTML = recent.map(r => `
+      <div class="ride-item" onclick="switchTab('record')">
+        <div class="ride-date">${r.date.slice(5)}</div>
+        <div class="ride-info">
+          <div class="ride-course">${r.course||'기록 없음'}</div>
+          <div class="ride-km">${r.dist}km · ${fmtTime(r.hour,r.min)||'-'}</div>
+          <div class="weather-tags">${(r.weather||[]).map(w=>`<span class="wtag">${wIcon(w)}${w}</span>`).join('')}</div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `).join('');
+  }
+
+  // 사진첩
+  const allPhotos = [];
+  records.forEach(r => { getRecordPhotos(r).forEach(p => allPhotos.push({p, id: r.id})); });
+  const gallery = document.getElementById('home-gallery');
+  if (!allPhotos.length) {
+    gallery.innerHTML = '<div style="text-align:center;padding:20px 0;color:#bbb;font-size:13px">아직 업로드된 사진이 없습니다</div>';
+  } else {
+    gallery.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px">
+      ${allPhotos.map(({p, id}) => `
+        <div style="aspect-ratio:1;overflow:hidden;cursor:pointer;border-radius:4px" onclick="goToRecord(${id})">
+          <img src="${p}" style="width:100%;height:100%;object-fit:cover">
+        </div>
+      `).join('')}
+    </div>`;
+  }
+}
+
+function goToRecord(id) {
+  switchTab('record');
+  setTimeout(() => {
+    const card = document.querySelector(`.record-card[data-id="${id}"]`);
+    if (card) card.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
 }
 
 // ===== 칭호 시스템 =====
@@ -923,11 +1026,11 @@ function computeEarnedBadges() {
   const memoCount = records.filter(r => r.memo && r.memo.trim()).length;
   if (memoCount >= 50) earned.push(92);
 
-  const photoCount = records.filter(r => r.photo).length;
+  const photoCount = records.filter(r => getRecordPhotos(r).length > 0).length;
   if (photoCount >= 30) earned.push(93);
 
   const fullCount = records.filter(r =>
-    r.date && r.time && r.dist && (r.hour || r.min) && r.course && r.weather && r.weather.length > 0 && r.memo && r.photo
+    r.date && r.time && r.dist && (r.hour || r.min) && r.course && r.weather && r.weather.length > 0 && r.memo && getRecordPhotos(r).length > 0
   ).length;
   if (fullCount >= 20) earned.push(94);
 
@@ -1094,13 +1197,14 @@ function renderStatTotal() {
   const count = records.length;
   const avg = count ? (total/count).toFixed(1) : 0;
 
-  // 연도별
+  // 연도별 (2026~2030 고정 5개년)
   const yearlyDist = {};
   records.forEach(r => {
     const y = r.date.slice(0,4);
     yearlyDist[y] = (yearlyDist[y]||0) + (r.dist||0);
   });
-  const years = Object.keys(yearlyDist).sort();
+  const fixedYears = ['2026','2027','2028','2029','2030'];
+  const fixedYearValues = fixedYears.map(y => yearlyDist[y]||0);
 
   // 최장 라이딩
   const maxRide = records.length ? records.reduce((m,r) => r.dist>m.dist?r:m, records[0]) : null;
@@ -1121,7 +1225,7 @@ function renderStatTotal() {
     </div>
     <div class="bar-chart">
       <div class="bar-chart-title">연도별 총 거리</div>
-      ${barChart(years, years.map(y => yearlyDist[y]))}
+      ${barChartKm(fixedYears, fixedYearValues)}
     </div>
     <div class="stats-2grid">
       ${statCard('최장 라이딩', maxRide ? maxRide.dist+'km' : '-', maxRide ? maxRide.course||maxRide.date : '')}
@@ -1236,6 +1340,19 @@ function barChart(labels, values) {
       <div class="bar-col">
         <div class="bar-val">${values[i]>0?Math.round(values[i]):''}</div>
         <div class="bar" style="height:${Math.round(values[i]/max*80)+2}px"></div>
+        <div class="bar-label">${l}</div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+function barChartKm(labels, values) {
+  const max = Math.max(...values, 1);
+  return `<div class="bars">
+    ${labels.map((l,i) => `
+      <div class="bar-col">
+        <div class="bar-val" style="font-size:7px">${values[i]>0 ? values[i].toFixed(1)+'km' : '0km'}</div>
+        <div class="bar" style="height:${values[i]>0 ? Math.round(values[i]/max*80)+2 : 2}px;${values[i]===0?'opacity:0.15':''}"></div>
         <div class="bar-label">${l}</div>
       </div>
     `).join('')}
