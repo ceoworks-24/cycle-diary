@@ -1113,7 +1113,7 @@ function renderBadges() {
   const pct = ti.nextAt ? Math.min(100, Math.round((nonTitleCount - ti.from) / (ti.nextAt - ti.from) * 100)) : 100;
   document.getElementById('bt-progress').style.width = pct + '%';
 
-  const cats = [...new Set(BADGES.map(b => b.cat))];
+  const cats = ['칭호 뱃지','거리 달성','횟수 달성','계절/날씨','속도/강도','코스 다양성','히든 뱃지'];
   const container = document.getElementById('badge-container');
   container.innerHTML = cats.map(cat => {
     const catBadges = BADGES.filter(b => b.cat === cat);
